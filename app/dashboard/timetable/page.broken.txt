@@ -1,0 +1,710 @@
+"use client";
+
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+
+type Session = {
+  id: string;
+  name: string;
+  is_current?: boolean;
+};
+
+type Term = {
+  id: string;
+  name: string;
+  academic_session_id: string;
+  is_current?: boolean;
+};
+
+type Period = {
+  id: string;
+  name: string;
+  period_number: number;
+  start_time: string;
+  end_time: string;
+  is_break: boolean;
+};
+
+type ClassItem = {
+  id: string;
+  name: string;
+};
+
+type Subject = {
+  id: string;
+  name: string;
+  code: string;
+};
+
+type Staff = {
+  id: string;
+  staff_id: string;
+  first_name: string;
+  last_name: string;
+};
+
+type Entry = {
+  id: string;
+  day_of_week: number;
+  room: string | null;
+
+  academic_session_id: string;
+  term_id: string;
+  period_id: string;
+  class_id: string;
+  subject_id: string;
+  staff_id: string;
+
+  session_name: string;
+  term_name: string;
+  period_name: string;
+  period_number: number;
+  start_time: string;
+  end_time: string;
+  is_break?: boolean;
+
+  class_name: string;
+  subject_name: string;
+  subject_code: string;
+
+  teacher_staff_id: string;
+  teacher_first_name: string;
+  teacher_last_name: string;
+};
+
+const days = [
+  { value: 1, label: "Monday" },
+  { value: 2, label: "Tuesday" },
+  { value: 3, label: "Wednesday" },
+  { value: 4, label: "Thursday" },
+  { value: 5, label: "Friday" },
+  { value: 6, label: "Saturday" },
+  { value: 7, label: "Sunday" },
+];
+
+function formatTime(value: string) {
+  return String(value).slice(0, 5);
+}
+
+async function readJson(response: Response, label: string) {
+  const text = await response.text();
+
+  if (!text.trim()) {
+    throw new Error(`${label} returned an empty response.`);
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(
+      `${label} returned an invalid response (${response.status}).`
+    );
+  }
+}
+
+export default function TimetablePage() {
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [terms, setTerms] = useState<Term[]>([]);
+  const [periods, setPeriods] = useState<Period[]>([]);
+  const [classes, setClasses] = useState<ClassItem[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [staff, setStaff] = useState<Staff[]>([]);
+  const [entries, setEntries] = useState<Entry[]>([]);
+
+  const [sessionId, setSessionId] = useState("");
+  const [termId, setTermId] = useState("");
+  const [periodId, setPeriodId] = useState("");
+  const [classId, setClassId] = useState("");
+  const [subjectId, setSubjectId] = useState("");
+  const [staffId, setStaffId] = useState("");
+  const [dayOfWeek, setDayOfWeek] = useState("1");
+  const [room, setRoom] = useState("");
+
+  const [viewSessionId, setViewSessionId] = useState("");
+  const [viewTermId, setViewTermId] = useState("");
+  const [viewClassId, setViewClassId] = useState("");
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  async function loadData() {
+    try {
+      setLoading(true);
+      setError("");
+
+      const [
+        sessionsResponse,
+        termsResponse,
+        periodsResponse,
+        classesResponse,
+        subjectsResponse,
+        staffResponse,
+        entriesResponse,
+      ] = await Promise.all([
+        fetch("/api/school/sessions", { cache: "no-store" }),
+        fetch("/api/school/terms", { cache: "no-store" }),
+        fetch("/api/school/timetable-periods", {
+          cache: "no-store",
+        }),
+        fetch("/api/school/classes", { cache: "no-store" }),
+        fetch("/api/school/subjects", { cache: "no-store" }),
+        fetch("/api/school/staff", { cache: "no-store" }),
+        fetch("/api/school/timetable-entries", {
+          cache: "no-store",
+        }),
+      ]);
+
+      const [
+        sessionsData,
+        termsData,
+        periodsData,
+        classesData,
+        subjectsData,
+        staffData,
+        entriesData,
+      ] = await Promise.all([
+        readJson(sessionsResponse, "Sessions"),
+        readJson(termsResponse, "Terms"),
+        readJson(periodsResponse, "Timetable periods"),
+        readJson(classesResponse, "Classes"),
+        readJson(subjectsResponse, "Subjects"),
+        readJson(staffResponse, "Staff"),
+        readJson(entriesResponse, "Timetable entries"),
+      ]);
+
+      if (!sessionsResponse.ok) {
+        throw new Error(
+          sessionsData.message || "Failed to load sessions"
+        );
+      }
+
+      if (!termsResponse.ok) {
+        throw new Error(
+          termsData.message || "Failed to load terms"
+        );
+      }
+
+      if (!periodsResponse.ok) {
+        throw new Error(
+          periodsData.message || "Failed to load periods"
+        );
+      }
+
+      if (!classesResponse.ok) {
+        throw new Error(
+          classesData.message || "Failed to load classes"
+        );
+      }
+
+      if (!subjectsResponse.ok) {
+        throw new Error(
+          subjectsData.message || "Failed to load subjects"
+        );
+      }
+
+      if (!staffResponse.ok) {
+        throw new Error(
+          staffData.message || "Failed to load staff"
+        );
+      }
+
+      if (!entriesResponse.ok) {
+        throw new Error(
+          entriesData.message || "Failed to load timetable"
+        );
+      }
+
+      const loadedSessions = sessionsData.sessions || [];
+      const loadedTerms = termsData.terms || [];
+      const loadedPeriods = periodsData.periods || [];
+      const loadedClasses = classesData.classes || [];
+      const loadedSubjects = subjectsData.subjects || [];
+      const loadedStaff = staffData.staff || [];
+      const loadedEntries = entriesData.entries || [];
+
+      setSessions(loadedSessions);
+      setTerms(loadedTerms);
+      setPeriods(loadedPeriods);
+      setClasses(loadedClasses);
+      setSubjects(loadedSubjects);
+      setStaff(loadedStaff);
+      setEntries(loadedEntries);
+
+      const currentSession =
+        loadedSessions.find(
+          (item: Session) => item.is_current
+        ) || loadedSessions[0];
+
+      if (!sessionId && currentSession) {
+        setSessionId(currentSession.id);
+      }
+
+      if (!viewSessionId && currentSession) {
+        setViewSessionId(currentSession.id);
+      }
+
+      if (!viewClassId && loadedClasses.length) {
+        setViewClassId(loadedClasses[0].id);
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load timetable data"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    if (!sessionId) {
+      setTermId("");
+      return;
+    }
+
+    const matchingTerms = terms.filter(
+      (term) =>
+        term.academic_session_id === sessionId
+    );
+
+    if (
+      matchingTerms.length &&
+      !matchingTerms.some(
+        (term) => term.id === termId
+      )
+    ) {
+      const currentTerm =
+        matchingTerms.find(
+          (term) => term.is_current
+        ) || matchingTerms[0];
+
+      setTermId(currentTerm.id);
+    }
+  }, [sessionId, terms]);
+
+  useEffect(() => {
+    if (!viewSessionId) {
+      setViewTermId("");
+      return;
+    }
+
+    const matchingTerms = terms.filter(
+      (term) =>
+        term.academic_session_id === viewSessionId
+    );
+
+    if (
+      matchingTerms.length &&
+      !matchingTerms.some(
+        (term) => term.id === viewTermId
+      )
+    ) {
+      const currentTerm =
+        matchingTerms.find(
+          (term) => term.is_current
+        ) || matchingTerms[0];
+
+      setViewTermId(currentTerm.id);
+    }
+  }, [viewSessionId, terms]);
+
+  const visibleTerms = terms.filter(
+    (term) =>
+      term.academic_session_id === sessionId
+  );
+
+  const viewTerms = terms.filter(
+    (term) =>
+      term.academic_session_id === viewSessionId
+  );
+
+  const visibleEntries = useMemo(() => {
+    return entries.filter((entry) => {
+      return (
+        entry.academic_session_id ===
+          viewSessionId &&
+        entry.term_id === viewTermId &&
+        entry.class_id === viewClassId
+      );
+    });
+  }, [
+    entries,
+    viewSessionId,
+    viewTermId,
+    viewClassId,
+  ]);
+
+  function getEntry(day: number, periodId: string) {
+    return visibleEntries.find(
+      (entry) =>
+        entry.day_of_week === day &&
+        entry.period_id === periodId
+    );
+  }
+
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    setSaving(true);
+    setMessage("");
+    setError("");
+
+    try {
+      const response = await fetch(
+        "/api/school/timetable-entries",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            academicSessionId: sessionId,
+            termId,
+            periodId,
+            classId,
+            subjectId,
+            staffId,
+            dayOfWeek: Number(dayOfWeek),
+            room,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Failed to create timetable entry"
+        );
+      }
+
+      setMessage(
+        "Timetable lesson created successfully."
+      );
+
+      setPeriodId("");
+      setClassId("");
+      setSubjectId("");
+      setStaffId("");
+      setRoom("");
+
+      await loadData();
+
+      setViewSessionId(sessionId);
+      setViewTermId(termId);
+      setViewClassId(classId);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to create timetable lesson"
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mb-6">
+          <Link
+            href="/dashboard"
+            className="text-sm text-muted-foreground hover:text-foreground"
+          >
+            ← Back to Dashboard
+          </Link>
+
+          <div className="mt-4">
+            <h1 className="text-2xl font-bold tracking-tight">
+              Timetable Builder
+            </h1>
+
+            <p className="mt-1 text-sm text-muted-foreground">
+              Build and view the school's weekly timetable
+              using configured periods, classes, subjects,
+              and teachers.
+            </p>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+            Loading timetable data...
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
+              <section className="rounded-xl border border-border bg-card p-5">
+                <h2 className="text-lg font-semibold">
+                  Add Lesson
+                </h2>
+
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Assign a teacher to a class, subject,
+                  day, and period.
+                </p>
+
+                <form
+                  onSubmit={handleSubmit}
+                  className="mt-5 space-y-4"
+                >
+                  <div>
+                    <label
+                      htmlFor="session"
+                      className="mb-1.5 block text-sm font-medium"
+                    >
+                      Academic session
+                    </label>
+
+                    <select
+                      id="session"
+                      value={sessionId}
+                      onChange={(e) =>
+                        setSessionId(e.target.value)
+                      }
+                      required
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">
+                        Select session
+                      </option>
+
+                      {sessions.map((session) => (
+                        <option
+                          key={session.id}
+                          value={session.id}
+                        >
+                          {session.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="term"
+                      className="mb-1.5 block text-sm font-medium"
+                    >
+                      Term
+                    </label>
+
+                    <select
+                      id="term"
+                      value={termId}
+                      onChange={(e) =>
+                        setTermId(e.target.value)
+                      }
+                      required
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">
+                        Select term
+                      </option>
+
+                      {visibleTerms.map((term) => (
+                        <option
+                          key={term.id}
+                          value={term.id}
+                        >
+                          {term.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="day"
+                      className="mb-1.5 block text-sm font-medium"
+                    >
+                      Day
+                    </label>
+
+                    <select
+                      id="day"
+                      value={dayOfWeek}
+                      onChange={(e) =>
+                        setDayOfWeek(e.target.value)
+                      }
+                      required
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      {days.map((day) => (
+                        <option
+                          key={day.value}
+                          value={day.value}
+                        >
+                          {day.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="period"
+                      className="mb-1.5 block text-sm font-medium"
+                    >
+                      Period
+                    </label>
+
+                    <select
+                      id="period"
+                      value={periodId}
+                      onChange={(e) =>
+                        setPeriodId(e.target.value)
+                      }
+                      required
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">
+                        Select period
+                      </option>
+
+                      {periods.map((period) => (
+                        <option
+                          key={period.id}
+                          value={period.id}
+                        >
+                          {period.name} (
+                          {formatTime(
+                            period.start_time
+                          )}
+                          {" – "}
+                          {formatTime(
+                            period.end_time
+                          )}
+                          )
+                          {period.is_break
+                            ? " — BREAK"
+                            : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="class"
+                      className="mb-1.5 block text-sm font-medium"
+                    >
+                      Class
+                    </label>
+
+                    <select
+                      id="class"
+                      value={classId}
+                      onChange={(e) =>
+                        setClassId(e.target.value)
+                      }
+                      required
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">
+                        Select class
+                      </option>
+
+                      {classes.map((item) => (
+                        <option
+                          key={item.id}
+                          value={item.id}
+                        >
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="subject"
+                      className="mb-1.5 block text-sm font-medium"
+                    >
+                      Subject
+                    </label>
+
+                    <select
+                      id="subject"
+                      value={subjectId}
+                      onChange={(e) =>
+                        setSubjectId(e.target.value)
+                      }
+                      required
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">
+                        Select subject
+                      </option>
+
+                      {subjects.map((subject) => (
+                        <option
+                          key={subject.id}
+                          value={subject.id}
+                        >
+                          {subject.name} ({subject.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="teacher"
+                      className="mb-1.5 block text-sm font-medium"
+                    >
+                      Teacher
+                    </label>
+
+                    <select
+                      id="teacher"
+                      value={staffId}
+                      onChange={(e) =>
+                        setStaffId(e.target.value)
+                      }
+                      required
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">
+                        Select teacher
+                      </option>
+
+                      {staff.map((person) => (
+                        <option
+                          key={person.id}
+                          value={person.id}
+                        >
+                          {person.first_name}{" "}
+                          {person.last_name} —{" "}
+                          {person.staff_id}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="room"
+                      className="mb-1.5 block text-sm font-medium"
+                    >
+                      Room
+                      <span className="ml-1 text-xs font-normal text-muted-foreground">
+                        (optional)
+                      </span>
+                    </label>
+
+                    <input
+                      id="room"
+                      type="text"
+                      value={room}
+                
