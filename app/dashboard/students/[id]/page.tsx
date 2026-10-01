@@ -83,7 +83,110 @@ export default async function StudentProfilePage({
         year: "numeric",
       })
     : "Not provided";
+        const parentsResult = await pool.query(
+    `SELECT
+       p.id,
+       p.full_name,
+       p.email,
+       p.phone,
+       p.address,
+       ps.relationship,
+       ps.is_primary_contact
+     FROM parent_students ps
+     INNER JOIN parents p
+       ON p.id = ps.parent_id
+      AND p.school_id = ps.school_id
+     WHERE ps.student_id = $1
+       AND ps.school_id = $2
+     ORDER BY ps.is_primary_contact DESC, p.full_name ASC`,
+    [student.id, membership.school_id]
+  );
 
+  const parents = parentsResult.rows;
+     const attendanceResult = await pool.query(
+    `SELECT
+       ar.id,
+       ar.attendance_date,
+       ar.status,
+       ar.remarks,
+       ar.academic_session_id,
+       ar.term_id,
+       s.name AS session_name,
+       t.name AS term_name
+     FROM attendance_records ar
+     INNER JOIN academic_sessions s
+       ON s.id = ar.academic_session_id
+      AND s.school_id = ar.school_id
+     INNER JOIN terms t
+       ON t.id = ar.term_id
+      AND t.school_id = ar.school_id
+     WHERE ar.student_id = $1
+       AND ar.school_id = $2
+     ORDER BY ar.attendance_date DESC`,
+    [student.id, membership.school_id]
+  );
+
+  const attendance = attendanceResult.rows;
+    const resultsResult = await pool.query(
+    `SELECT
+       r.id,
+       r.ca_score,
+       r.exam_score,
+       r.total_score,
+       r.grade,
+       r.remarks,
+       r.academic_session_id,
+       r.term_id,
+       r.subject_id,
+       s.name AS session_name,
+       t.name AS term_name,
+       sub.name AS subject_name,
+       sub.code AS subject_code
+     FROM results r
+     INNER JOIN academic_sessions s
+       ON s.id = r.academic_session_id
+      AND s.school_id = r.school_id
+     INNER JOIN terms t
+       ON t.id = r.term_id
+      AND t.school_id = r.school_id
+     INNER JOIN subjects sub
+       ON sub.id = r.subject_id
+      AND sub.school_id = r.school_id
+     WHERE r.student_id = $1
+       AND r.school_id = $2
+     ORDER BY s.start_date DESC, t.name ASC, sub.name ASC`,
+    [student.id, membership.school_id]
+  );
+
+  const results = resultsResult.rows;
+  const feesResult = await pool.query(
+    `SELECT
+       f.id,
+       f.fee_name,
+       f.amount_due,
+       f.amount_paid,
+       (f.amount_due - f.amount_paid) AS balance,
+       f.due_date,
+       f.status,
+       f.remarks,
+       f.academic_session_id,
+       f.term_id,
+       s.name AS session_name,
+       t.name AS term_name
+     FROM student_fees f
+     INNER JOIN academic_sessions s
+       ON s.id = f.academic_session_id
+      AND s.school_id = f.school_id
+     INNER JOIN terms t
+       ON t.id = f.term_id
+      AND t.school_id = f.school_id
+     WHERE f.student_id = $1
+       AND f.school_id = $2
+     ORDER BY f.due_date DESC NULLS LAST, f.created_at DESC`,
+    [student.id, membership.school_id]
+  );
+
+  const fees = feesResult.rows;
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
@@ -228,33 +331,271 @@ export default async function StudentProfilePage({
               <h2 className="text-lg font-semibold">Student Records</h2>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
+               <div className="rounded-lg border bg-muted/20 p-4">
+  <div className="flex items-center justify-between gap-3">
+    <p className="font-medium">Parents & Guardians</p>
+
+    <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+      {parents.length}
+    </span>
+  </div>
+
+  {parents.length === 0 ? (
+    <p className="mt-3 text-sm text-muted-foreground">
+      No parent or guardian has been linked to this student yet.
+    </p>
+  ) : (
+    <div className="mt-4 space-y-3">
+      {parents.map((parent) => (
+        <div
+          key={parent.id}
+          className="rounded-lg border bg-background p-3"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-medium">{parent.full_name}</p>
+
+              <p className="mt-1 text-xs capitalize text-muted-foreground">
+                {parent.relationship || "Guardian"}
+              </p>
+            </div>
+
+            {parent.is_primary_contact && (
+              <span className="rounded-full bg-success/10 px-2 py-1 text-[11px] font-semibold text-success">
+                Primary
+              </span>
+            )}
+          </div>
+
+          {parent.phone && (
+            <p className="mt-3 text-sm text-muted-foreground">
+              📞 {parent.phone}
+            </p>
+          )}
+
+          {parent.email && (
+            <p className="mt-1 break-all text-sm text-muted-foreground">
+              ✉️ {parent.email}
+            </p>
+          )}
+        </div>
+      ))}
+    </div>
+  )}
+</div>
                 <div className="rounded-lg border bg-muted/20 p-4">
                   <p className="font-medium">Parents & Guardians</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Parent relationships will appear here.
-                  </p>
+                  
                 </div>
 
                 <div className="rounded-lg border bg-muted/20 p-4">
-                  <p className="font-medium">Attendance</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Attendance records will appear here.
-                  </p>
-                </div>
+  <div className="flex items-center justify-between gap-3">
+    <p className="font-medium">Attendance</p>
+
+    <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+      {attendance.length}
+    </span>
+  </div>
+
+  {attendance.length === 0 ? (
+    <p className="mt-3 text-sm text-muted-foreground">
+      No attendance records have been recorded for this student yet.
+    </p>
+  ) : (
+    <div className="mt-4 space-y-3">
+      {attendance.slice(0, 5).map((record) => (
+        <div
+          key={record.id}
+          className="rounded-lg border bg-background p-3"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-medium capitalize">
+                {record.status}
+              </p>
+
+              <p className="mt-1 text-xs text-muted-foreground">
+                {new Date(record.attendance_date).toLocaleDateString(
+                  "en-NG",
+                  {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  }
+                )}
+              </p>
+            </div>
+
+            <span className="text-xs text-muted-foreground">
+              {record.term_name}
+            </span>
+          </div>
+
+          {record.remarks && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {record.remarks}
+            </p>
+          )}
+        </div>
+      ))}
+
+      {attendance.length > 5 && (
+        <p className="pt-1 text-xs text-muted-foreground">
+          Showing the 5 most recent records.
+        </p>
+      )}
+    </div>
+  )}
+</div>
 
                 <div className="rounded-lg border bg-muted/20 p-4">
-                  <p className="font-medium">Results</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Academic results will appear here.
-                  </p>
-                </div>
+  <div className="flex items-center justify-between gap-3">
+    <p className="font-medium">Results</p>
+
+    <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+      {results.length}
+    </span>
+  </div>
+
+  {results.length === 0 ? (
+    <p className="mt-3 text-sm text-muted-foreground">
+      No academic results have been recorded for this student yet.
+    </p>
+  ) : (
+    <div className="mt-4 space-y-3">
+      {results.slice(0, 5).map((result) => (
+        <div
+          key={result.id}
+          className="rounded-lg border bg-background p-3"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-medium">{result.subject_name}</p>
+
+              <p className="mt-1 text-xs text-muted-foreground">
+                {result.session_name} · {result.term_name}
+              </p>
+            </div>
+
+            <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-bold text-primary">
+              {result.total_score}
+            </span>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+            <p>CA: {result.ca_score}</p>
+            <p>Exam: {result.exam_score}</p>
+          </div>
+
+          {result.grade && (
+            <p className="mt-2 text-sm font-medium">
+              Grade: {result.grade}
+            </p>
+          )}
+
+          {result.remarks && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              {result.remarks}
+            </p>
+          )}
+        </div>
+      ))}
+
+      {results.length > 5 && (
+        <p className="pt-1 text-xs text-muted-foreground">
+          Showing the 5 most recent results.
+        </p>
+      )}
+    </div>
+  )}
+</div>
 
                 <div className="rounded-lg border bg-muted/20 p-4">
-                  <p className="font-medium">Fees</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Fee records will appear here.
-                  </p>
-                </div>
+  <div className="flex items-center justify-between gap-3">
+    <p className="font-medium">Fees</p>
+
+    <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+      {fees.length}
+    </span>
+  </div>
+
+  {fees.length === 0 ? (
+    <p className="mt-3 text-sm text-muted-foreground">
+      No fee records have been created for this student yet.
+    </p>
+  ) : (
+    <div className="mt-4 space-y-3">
+      {fees.slice(0, 5).map((fee) => (
+        <div
+          key={fee.id}
+          className="rounded-lg border bg-background p-3"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-medium">{fee.fee_name}</p>
+
+              <p className="mt-1 text-xs text-muted-foreground">
+                {fee.session_name} · {fee.term_name}
+              </p>
+            </div>
+
+            <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold capitalize text-primary">
+              {fee.status}
+            </span>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <p>
+              Due:{" "}
+              <span className="font-medium">
+                ₦{Number(fee.amount_due).toLocaleString("en-NG")}
+              </span>
+            </p>
+
+            <p>
+              Paid:{" "}
+              <span className="font-medium">
+                ₦{Number(fee.amount_paid).toLocaleString("en-NG")}
+              </span>
+            </p>
+
+            <p>
+              Balance:{" "}
+              <span className="font-medium">
+                ₦{Number(fee.balance).toLocaleString("en-NG")}
+              </span>
+            </p>
+
+            {fee.due_date && (
+              <p>
+                Due date:{" "}
+                <span className="font-medium">
+                  {new Date(fee.due_date).toLocaleDateString("en-NG", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
+              </p>
+            )}
+          </div>
+
+          {fee.remarks && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {fee.remarks}
+            </p>
+          )}
+        </div>
+      ))}
+
+      {fees.length > 5 && (
+        <p className="pt-1 text-xs text-muted-foreground">
+          Showing the 5 most recent fee records.
+        </p>
+      )}
+    </div>
+  )}
+</div>
               </div>
             </section>
           </div>
