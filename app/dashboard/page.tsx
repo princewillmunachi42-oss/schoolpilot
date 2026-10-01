@@ -25,8 +25,12 @@ export default async function DashboardPage() {
 
   const membership = membershipResult.rows[0];
 
-  if (!membership) {
+    if (!membership) {
     redirect("/login");
+  }
+
+  if (membership.role === "teacher") {
+    redirect("/teacher");
   }
 
   const schoolId = membership.school_id;

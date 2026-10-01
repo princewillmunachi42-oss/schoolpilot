@@ -175,7 +175,27 @@ export default async function StaffPage() {
                 className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:border-primary"
               />
             </div>
+                        <div>
+              <label
+                htmlFor="password"
+                className="mb-2 block text-sm font-medium"
+              >
+                Teacher Login Password
+              </label>
 
+              <input
+                id="password"
+                name="password"
+                type="password"
+                minLength={8}
+                placeholder="Minimum 8 characters"
+                className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:border-primary"
+              />
+
+              <p className="mt-1 text-xs text-muted-foreground">
+                Optional. Required only when creating a teacher login account.
+              </p>
+            </div>
             <div>
               <label
                 htmlFor="phone"

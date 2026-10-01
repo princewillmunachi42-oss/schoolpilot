@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import pool from "@/lib/db";
+	import { NextRequest, NextResponse } from "next/server";
+	import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
+import { hashPassword } from "@/lib/auth/password";
+
 export async function GET() {
   const user = await getCurrentUser();
 
@@ -56,6 +58,7 @@ export async function GET() {
     staff: result.rows,
   });
 }
+
 export async function POST(request: NextRequest) {
   const user = await getCurrentUser();
 
@@ -75,6 +78,7 @@ export async function POST(request: NextRequest) {
   const email = String(formData.get("email") ?? "")
     .trim()
     .toLowerCase();
+  const password = String(formData.get("password") ?? "");
   const phone = String(formData.get("phone") ?? "").trim();
   const roleTitle = String(formData.get("roleTitle") ?? "").trim();
   const status = String(formData.get("status") ?? "active").trim();
@@ -119,6 +123,36 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (email && !password) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "A login password is required when an email is provided.",
+      },
+      { status: 400 }
+    );
+  }
+
+  if (password && !email) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "An email is required when creating a login account.",
+      },
+      { status: 400 }
+    );
+  }
+
+  if (password && password.length < 8) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Teacher login password must be at least 8 characters.",
+      },
+      { status: 400 }
+    );
+  }
+
   const membershipResult = await pool.query(
     `SELECT school_id, role
      FROM school_members
@@ -139,10 +173,67 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const client = await pool.connect();
+
   try {
-    await pool.query(
+    await client.query("BEGIN");
+
+    let userId: string | null = null;
+
+    if (email && password) {
+      const existingUserResult = await client.query(
+        `SELECT id
+         FROM users
+         WHERE lower(email) = lower($1)
+         LIMIT 1`,
+        [email]
+      );
+
+      if (existingUserResult.rows.length > 0) {
+        throw new Error("EMAIL_ALREADY_EXISTS");
+      }
+
+      const passwordHash = await hashPassword(password);
+
+      const newUserResult = await client.query(
+        `INSERT INTO users (
+           email,
+           password_hash,
+           first_name,
+           last_name,
+           phone,
+           email_verified,
+           status
+         )
+         VALUES ($1, $2, $3, $4, $5, FALSE, $6)
+         RETURNING id`,
+        [
+          email,
+          passwordHash,
+          firstName,
+          lastName,
+          phone || null,
+          status === "active" ? "active" : "inactive",
+        ]
+      );
+
+      userId = newUserResult.rows[0].id;
+
+      await client.query(
+        `INSERT INTO school_members (
+           school_id,
+           user_id,
+           role
+         )
+         VALUES ($1, $2, 'teacher')`,
+        [membership.school_id, userId]
+      );
+    }
+
+    await client.query(
       `INSERT INTO staff (
          school_id,
+         user_id,
          staff_id,
          first_name,
          last_name,
@@ -152,9 +243,10 @@ export async function POST(request: NextRequest) {
          role_title,
          status
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         membership.school_id,
+        userId,
         staffId,
         firstName,
         lastName,
@@ -166,11 +258,25 @@ export async function POST(request: NextRequest) {
       ]
     );
 
+    await client.query("COMMIT");
+
     return NextResponse.redirect(
       new URL("/dashboard/staff?created=1", request.url)
     );
   } catch (error) {
+    await client.query("ROLLBACK");
+
     console.error("Staff creation error:", error);
+
+    if (error instanceof Error && error.message === "EMAIL_ALREADY_EXISTS") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "A user account with this email already exists.",
+        },
+        { status: 409 }
+      );
+    }
 
     return NextResponse.json(
       {
@@ -180,5 +286,7 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
+  } finally {
+    client.release();
   }
 }
