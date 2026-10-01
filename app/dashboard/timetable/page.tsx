@@ -122,6 +122,7 @@ export default function TimetablePage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+    const [editingEntryId, setEditingEntryId] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -346,12 +347,13 @@ export default function TimetablePage() {
       setError("");
 
       const response = await fetch("/api/school/timetable-entries", {
-        method: "POST",
+        method: editingEntryId ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          academicSessionId: sessionId,
+  id: editingEntryId || undefined,
+  academicSessionId: sessionId,
           termId,
           periodId,
           classId,
@@ -369,7 +371,7 @@ export default function TimetablePage() {
           data.error || "Failed to create timetable lesson.",
         );
       }
-
+      setEditingEntryId("");
       setMessage("Timetable lesson created successfully.");
       setPeriodId("");
       setClassId("");
@@ -388,7 +390,59 @@ export default function TimetablePage() {
       setSaving(false);
     }
   }
+  async function handleEdit(entry: Entry) {
+    setEditingEntryId(entry.id);
+    setSessionId(entry.academic_session_id);
+    setTermId(entry.term_id);
+    setPeriodId(entry.period_id);
+    setClassId(entry.class_id);
+    setSubjectId(entry.subject_id);
+    setStaffId(entry.staff_id);
+    setDayOfWeek(String(entry.day_of_week));
+    setRoom(entry.room ?? "");
+setMessage("Editing timetable lesson...");
+setError("");
+  }
+    async function handleDelete(id: string) {
+    if (!window.confirm("Are you sure you want to delete this timetable lesson?")) {
+      return;
+    }
 
+    try {
+      setSaving(true);
+      setMessage("");
+      setError("");
+
+      const response = await fetch("/api/school/timetable-entries", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id }),
+      });
+
+      const data = await readJson(response, "Timetable delete");
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to delete timetable lesson.");
+      }
+
+      if (editingEntryId === id) {
+        setEditingEntryId("");
+      }
+
+      setMessage("Timetable lesson deleted successfully.");
+      await loadData();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to delete timetable lesson.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
   const sortedPeriods = [...periods].sort(
     (a, b) => a.period_number - b.period_number,
   );
@@ -961,7 +1015,24 @@ export default function TimetablePage() {
                               {entry.room}
                             </div>
                           ) : null}
-                        </div>
+                         </div>
+                        <div className="mt-4 flex gap-2">
+  <button
+    type="button"
+    onClick={() => handleEdit(entry)}
+    className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted"
+  >
+    Edit
+  </button>
+
+  <button
+    type="button"
+    onClick={() => handleDelete(entry.id)}
+    className="rounded-md border border-destructive px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10"
+  >
+    Delete
+  </button>
+</div>
                       </div>
                     ))}
                   </div>

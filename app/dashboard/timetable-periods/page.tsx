@@ -17,6 +17,7 @@ export default function TimetablePeriodsPage() {
   const [periods, setPeriods] = useState<Period[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [editingPeriodId, setEditingPeriodId] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -66,17 +67,19 @@ export default function TimetablePeriodsPage() {
 
     try {
       const response = await fetch("/api/school/timetable-periods", {
-        method: "POST",
+        method: editingPeriodId ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name,
-          periodNumber: Number(periodNumber),
-          startTime,
-          endTime,
-          isBreak,
-        }),
+  id: editingPeriodId || undefined,
+  name,
+  periodNumber: Number(periodNumber),
+  startTime,
+  endTime,
+  isBreak,
+  isActive: true,
+}),
       });
 
       const data = await response.json();
@@ -85,14 +88,18 @@ export default function TimetablePeriodsPage() {
         throw new Error(data.message || "Failed to create period");
       }
 
-      setMessage("Period created successfully.");
+      setMessage(
+  editingPeriodId
+    ? "Period updated successfully."
+    : "Period created successfully."
+);
 
       setName("");
       setPeriodNumber("");
       setStartTime("");
       setEndTime("");
       setIsBreak(false);
-
+      setEditingPeriodId("");
       await loadPeriods();
     } catch (err) {
       setError(
@@ -104,7 +111,59 @@ export default function TimetablePeriodsPage() {
       setSaving(false);
     }
   }
+         function handleEdit(period: Period) {
+    setEditingPeriodId(period.id);
+    setName(period.name);
+    setPeriodNumber(String(period.period_number));
+    setStartTime(String(period.start_time).slice(0, 5));
+    setEndTime(String(period.end_time).slice(0, 5));
+    setIsBreak(period.is_break);
+    setMessage("Editing timetable period...");
+    setError("");
+  }
 
+  async function handleDelete(id: string) {
+    if (!window.confirm("Are you sure you want to delete this timetable period?")) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setMessage("");
+      setError("");
+
+      const response = await fetch("/api/school/timetable-periods", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to delete timetable period"
+        );
+      }
+
+      if (editingPeriodId === id) {
+        setEditingPeriodId("");
+      }
+
+      setMessage("Period deleted successfully.");
+      await loadPeriods();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to delete timetable period"
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
@@ -250,7 +309,13 @@ export default function TimetablePeriodsPage() {
                 disabled={saving}
                 className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {saving ? "Adding..." : "Add Period"}
+                {saving
+  ? editingPeriodId
+    ? "Updating..."
+    : "Adding..."
+  : editingPeriodId
+    ? "Update Period"
+    : "Add Period"}
               </button>
             </form>
           </section>
@@ -312,9 +377,27 @@ export default function TimetablePeriodsPage() {
                       </div>
                     </div>
 
-                    <span className="text-sm text-muted-foreground">
-                      Period {period.period_number}
-                    </span>
+                    <div className="flex items-center gap-2">
+  <span className="text-sm text-muted-foreground">
+    Period {period.period_number}
+  </span>
+
+  <button
+    type="button"
+    onClick={() => handleEdit(period)}
+    className="rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted"
+  >
+    Edit
+  </button>
+
+  <button
+    type="button"
+    onClick={() => handleDelete(period.id)}
+    className="rounded-md border border-destructive px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10"
+  >
+    Delete
+  </button>
+</div>
                   </div>
                 ))}
               </div>
