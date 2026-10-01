@@ -1,5 +1,6 @@
 
 import Link from "next/link";
+import StudentProfileEditor from "@/components/student-profile-editor";
 import { notFound, redirect } from "next/navigation";
 import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -238,6 +239,20 @@ export default async function StudentProfilePage({
                 <p className="mt-1 text-sm text-muted-foreground">
                   {student.class_name ?? "No class assigned"}
                 </p>
+               <StudentProfileEditor
+  studentId={student.id}
+  firstName={student.first_name ?? ""}
+  lastName={student.last_name ?? ""}
+  otherName={student.other_name ?? ""}
+  gender={student.gender ?? ""}
+  dateOfBirth={
+    student.date_of_birth
+      ? new Date(student.date_of_birth).toISOString().slice(0, 10)
+      : ""
+  }
+  email={student.email ?? ""}
+  phone={student.phone ?? ""}
+/>
               </div>
             </div>
           </div>
