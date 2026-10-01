@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-
+import Link from "next/link";
 type Student = {
   id: string;
   admission_number: string;
@@ -259,6 +259,12 @@ export default function StudentsPage() {
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
+           <Link
+  href="/dashboard"
+  className="mb-4 inline-flex items-center text-sm font-medium text-primary hover:underline"
+>
+  ← Back to Dashboard
+</Link>
             <p className="text-sm font-medium text-muted-foreground">
               Student Management
             </p>
@@ -620,6 +626,12 @@ export default function StudentsPage() {
 
 <td className="px-6 py-4">
   <div className="flex justify-end gap-2">
+   <Link
+  href={`/dashboard/students/${student.id}`}
+  className="rounded-lg border px-3 py-2 text-xs font-semibold hover:bg-muted"
+>
+  View
+</Link>
     <button
       type="button"
       onClick={() => openEdit(student)}
