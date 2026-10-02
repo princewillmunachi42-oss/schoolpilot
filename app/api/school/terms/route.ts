@@ -1,20 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
-export async function GET() {
+
+async function getOwnerSchoolId() {
   const user = await getCurrentUser();
 
   if (!user) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Unauthorized",
-      },
-      { status: 401 }
-    );
+    return null;
   }
 
-  const membershipResult = await pool.query(
+  const result = await pool.query(
     `SELECT school_id
      FROM school_members
      WHERE user_id = $1
@@ -23,30 +18,34 @@ export async function GET() {
     [user.id]
   );
 
-  const membership = membershipResult.rows[0];
+  return result.rows[0]?.school_id ?? null;
+}
 
-  if (!membership) {
+export async function GET() {
+  const schoolId = await getOwnerSchoolId();
+
+  if (!schoolId) {
     return NextResponse.json(
-      {
-        success: false,
-        message: "School membership not found.",
-      },
+      { success: false, message: "Unauthorized." },
       { status: 403 }
     );
   }
 
   const result = await pool.query(
     `SELECT
-       id,
-       name,
-       academic_session_id,
-       start_date,
-       end_date,
-       is_current
-     FROM terms
-     WHERE school_id = $1
-     ORDER BY start_date ASC`,
-    [membership.school_id]
+       t.id,
+       t.name,
+       t.start_date,
+       t.end_date,
+       t.is_current,
+       t.academic_session_id,
+       ac.name AS session_name
+     FROM terms t
+     JOIN academic_sessions ac
+       ON ac.id = t.academic_session_id
+     WHERE t.school_id = $1
+     ORDER BY ac.start_date DESC, t.start_date ASC`,
+    [schoolId]
   );
 
   return NextResponse.json({
@@ -54,61 +53,51 @@ export async function GET() {
     terms: result.rows,
   });
 }
-export async function POST(request: NextRequest) {
-  const user = await getCurrentUser();
 
-  if (!user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+export async function POST(request: Request) {
+  const schoolId = await getOwnerSchoolId();
+
+  if (!schoolId) {
+    return NextResponse.json(
+      { success: false, message: "Unauthorized." },
+      { status: 403 }
+    );
   }
 
-  const formData = await request.formData();
+const formData = await request.formData();
 
-  const academicSessionId = String(
-    formData.get("academicSessionId") ?? ""
-  ).trim();
+const body = {
+  academicSessionId: String(formData.get("academicSessionId") ?? ""),
+  name: String(formData.get("name") ?? ""),
+  startDate: String(formData.get("startDate") ?? ""),
+  endDate: String(formData.get("endDate") ?? ""),
+  isCurrent: formData.get("isCurrent") === "true",
+};
 
-  const name = String(formData.get("name") ?? "").trim();
-  const startDate = String(formData.get("startDate") ?? "").trim();
-  const endDate = String(formData.get("endDate") ?? "").trim();
-  const isCurrent = formData.get("isCurrent") === "true";
+  const {
+    academicSessionId,
+    name,
+    startDate,
+    endDate,
+    isCurrent,
+  } = body;
 
-  if (!academicSessionId || !name || !startDate || !endDate) {
+  if (
+    !academicSessionId ||
+    !name ||
+    !startDate ||
+    !endDate
+  ) {
     return NextResponse.json(
-      {
-        success: false,
-        message: "Session, term name, start date and end date are required.",
-      },
+      { success: false, message: "All required fields must be provided." },
       { status: 400 }
     );
   }
 
   if (new Date(endDate) <= new Date(startDate)) {
     return NextResponse.json(
-      {
-        success: false,
-        message: "End date must be after start date.",
-      },
+      { success: false, message: "End date must be after start date." },
       { status: 400 }
-    );
-  }
-
-  const membershipResult = await pool.query(
-    `SELECT school_id, role
-     FROM school_members
-     WHERE user_id = $1
-     LIMIT 1`,
-    [user.id]
-  );
-
-  const membership = membershipResult.rows[0];
-
-  if (!membership || membership.role !== "owner") {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Only the school owner can manage terms.",
-      },
-      { status: 403 }
     );
   }
 
@@ -118,15 +107,12 @@ export async function POST(request: NextRequest) {
      WHERE id = $1
        AND school_id = $2
      LIMIT 1`,
-    [academicSessionId, membership.school_id]
+    [academicSessionId, schoolId]
   );
 
-  if (!sessionResult.rowCount) {
+  if (sessionResult.rows.length === 0) {
     return NextResponse.json(
-      {
-        success: false,
-        message: "Academic session not found for this school.",
-      },
+      { success: false, message: "Academic session not found." },
       { status: 404 }
     );
   }
@@ -136,12 +122,13 @@ export async function POST(request: NextRequest) {
   try {
     await client.query("BEGIN");
 
-    if (isCurrent) {
+    if (Boolean(isCurrent)) {
       await client.query(
         `UPDATE terms
-         SET is_current = false
+         SET is_current = FALSE,
+             updated_at = NOW()
          WHERE school_id = $1`,
-        [membership.school_id]
+        [schoolId]
       );
     }
 
@@ -156,33 +143,215 @@ export async function POST(request: NextRequest) {
        )
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [
-        membership.school_id,
+        schoolId,
         academicSessionId,
-        name,
+        String(name).trim(),
         startDate,
         endDate,
-        isCurrent,
+        Boolean(isCurrent),
       ]
     );
 
     await client.query("COMMIT");
 
-    return NextResponse.redirect(
-      new URL("/dashboard/terms?created=1", request.url)
-    );
-  } catch (error) {
+    return NextResponse.json({
+      success: true,
+      message: "Term created successfully.",
+    });
+  } catch {
     await client.query("ROLLBACK");
-
-    console.error("Term creation error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        message: "Unable to create term.",
+        message: "Unable to create term. The term may already exist.",
       },
-      { status: 500 }
+      { status: 409 }
     );
   } finally {
     client.release();
+  }
+}
+
+export async function PUT(request: Request) {
+  const schoolId = await getOwnerSchoolId();
+
+  if (!schoolId) {
+    return NextResponse.json(
+      { success: false, message: "Unauthorized." },
+      { status: 403 }
+    );
+  }
+
+  const body = await request.json();
+
+  const {
+    id,
+    academicSessionId,
+    name,
+    startDate,
+    endDate,
+    isCurrent,
+  } = body;
+
+  if (
+    !id ||
+    !academicSessionId ||
+    !name ||
+    !startDate ||
+    !endDate
+  ) {
+    return NextResponse.json(
+      { success: false, message: "All required fields must be provided." },
+      { status: 400 }
+    );
+  }
+
+  if (new Date(endDate) <= new Date(startDate)) {
+    return NextResponse.json(
+      { success: false, message: "End date must be after start date." },
+      { status: 400 }
+    );
+  }
+
+  const sessionResult = await pool.query(
+    `SELECT id
+     FROM academic_sessions
+     WHERE id = $1
+       AND school_id = $2
+     LIMIT 1`,
+    [academicSessionId, schoolId]
+  );
+
+  if (sessionResult.rows.length === 0) {
+    return NextResponse.json(
+      { success: false, message: "Academic session not found." },
+      { status: 404 }
+    );
+  }
+
+  const existingResult = await pool.query(
+    `SELECT id
+     FROM terms
+     WHERE id = $1
+       AND school_id = $2
+     LIMIT 1`,
+    [id, schoolId]
+  );
+
+  if (existingResult.rows.length === 0) {
+    return NextResponse.json(
+      { success: false, message: "Term not found." },
+      { status: 404 }
+    );
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    if (Boolean(isCurrent)) {
+      await client.query(
+        `UPDATE terms
+         SET is_current = FALSE,
+             updated_at = NOW()
+         WHERE school_id = $1
+           AND id <> $2`,
+        [schoolId, id]
+      );
+    }
+
+    await client.query(
+      `UPDATE terms
+       SET academic_session_id = $1,
+           name = $2,
+           start_date = $3,
+           end_date = $4,
+           is_current = $5,
+           updated_at = NOW()
+       WHERE id = $6
+         AND school_id = $7`,
+      [
+        academicSessionId,
+        String(name).trim(),
+        startDate,
+        endDate,
+        Boolean(isCurrent),
+        id,
+        schoolId,
+      ]
+    );
+
+    await client.query("COMMIT");
+
+    return NextResponse.json({
+      success: true,
+      message: "Term updated successfully.",
+    });
+  } catch {
+    await client.query("ROLLBACK");
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to update term. The term may already exist.",
+      },
+      { status: 409 }
+    );
+  } finally {
+    client.release();
+  }
+}
+
+export async function DELETE(request: Request) {
+  const schoolId = await getOwnerSchoolId();
+
+  if (!schoolId) {
+    return NextResponse.json(
+      { success: false, message: "Unauthorized." },
+      { status: 403 }
+    );
+  }
+
+  const body = await request.json();
+  const { id } = body;
+
+  if (!id) {
+    return NextResponse.json(
+      { success: false, message: "Term ID is required." },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const result = await pool.query(
+      `DELETE FROM terms
+       WHERE id = $1
+         AND school_id = $2
+       RETURNING id`,
+      [id, schoolId]
+    );
+
+    if (result.rows.length === 0) {
+      return NextResponse.json(
+        { success: false, message: "Term not found." },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Term deleted successfully.",
+    });
+  } catch {
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          "This term cannot be deleted because it is already being used by attendance, results, fees, or timetable records.",
+      },
+      { status: 409 }
+    );
   }
 }

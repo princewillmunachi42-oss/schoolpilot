@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
-
+import ClassActions from "@/components/ClassActions";
 export default async function ClassesPage() {
   const user = await getCurrentUser();
 
@@ -212,44 +212,50 @@ export default async function ClassesPage() {
             </p>
           </div>
 
-          {classes.length === 0 ? (
-            <div className="p-10 text-center">
-              <p className="font-medium">No classes yet</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Create your first class using the form above.
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y">
-              {classes.map((classItem) => (
-                <div
-                  key={classItem.id}
-                  className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div>
-                    <h3 className="font-semibold">{classItem.name}</h3>
+{classes.length === 0 ? (
+  <div className="p-10 text-center">
+    <p className="font-medium">No classes yet</p>
+    <p className="mt-1 text-sm text-muted-foreground">
+      Create your first class using the form above.
+    </p>
+  </div>
+) : (
+  <div className="divide-y">
+    {classes.map((classItem) => (
+      <div
+        key={classItem.id}
+        className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div>
+          <h3 className="font-semibold">
+            {classItem.name}
+          </h3>
 
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {classItem.session_name}
-                      {classItem.capacity
-                        ? ` • Capacity: ${classItem.capacity}`
-                        : " • No fixed capacity"}
-                    </p>
-                  </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {classItem.session_name}
+            {classItem.capacity
+              ? ` • Capacity: ${classItem.capacity}`
+              : " • No fixed capacity"}
+          </p>
+        </div>
 
-                  <span
-                    className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${
-                      classItem.status === "active"
-                        ? "bg-success/10 text-success"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {classItem.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="flex flex-col items-start gap-3 sm:items-end">
+          <span
+            className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${
+              classItem.status === "active"
+                ? "bg-success/10 text-success"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {classItem.status}
+          </span>
+
+          <ClassActions id={classItem.id} />
+        </div>
+      </div>
+    ))}
+  </div>
+)}
         </section>
       </div>
     </main>

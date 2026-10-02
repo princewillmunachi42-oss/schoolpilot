@@ -475,6 +475,192 @@ export default function StudentsPage() {
           </section>
         )}
 
+        {editingStudent && (
+          <section className="mb-8 rounded-xl border bg-card p-6">
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-semibold">Edit Student</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Update the student information and status.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeEdit}
+                className="rounded-lg border px-3 py-2 text-sm font-semibold hover:bg-muted"
+              >
+                Close
+              </button>
+            </div>
+
+            <form
+              onSubmit={handleEditSubmit}
+              className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              <div>
+                <label className="mb-2 block text-sm font-medium">
+                  Admission Number
+                </label>
+                <input
+                  value={editForm.admissionNumber}
+                  onChange={(event) =>
+                    setEditForm((form) => ({
+                      ...form,
+                      admissionNumber: event.target.value,
+                    }))
+                  }
+                  required
+                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium">
+                  Class
+                </label>
+                <select
+                  value={editForm.classId}
+                  onChange={(event) =>
+                    setEditForm((form) => ({
+                      ...form,
+                      classId: event.target.value,
+                    }))
+                  }
+                  required
+                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="" disabled>Select class</option>
+                  {classes.map((schoolClass) => (
+                    <option key={schoolClass.id} value={schoolClass.id}>
+                      {schoolClass.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium">First Name</label>
+                <input
+                  value={editForm.firstName}
+                  onChange={(event) =>
+                    setEditForm((form) => ({ ...form, firstName: event.target.value }))
+                  }
+                  required
+                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium">Last Name</label>
+                <input
+                  value={editForm.lastName}
+                  onChange={(event) =>
+                    setEditForm((form) => ({ ...form, lastName: event.target.value }))
+                  }
+                  required
+                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium">Other Name</label>
+                <input
+                  value={editForm.otherName}
+                  onChange={(event) =>
+                    setEditForm((form) => ({ ...form, otherName: event.target.value }))
+                  }
+                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium">Gender</label>
+                <select
+                  value={editForm.gender}
+                  onChange={(event) =>
+                    setEditForm((form) => ({ ...form, gender: event.target.value }))
+                  }
+                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">Select gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium">Date of Birth</label>
+                <input
+                  type="date"
+                  value={editForm.dateOfBirth}
+                  onChange={(event) =>
+                    setEditForm((form) => ({ ...form, dateOfBirth: event.target.value }))
+                  }
+                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium">Email</label>
+                <input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(event) =>
+                    setEditForm((form) => ({ ...form, email: event.target.value }))
+                  }
+                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium">Phone</label>
+                <input
+                  value={editForm.phone}
+                  onChange={(event) =>
+                    setEditForm((form) => ({ ...form, phone: event.target.value }))
+                  }
+                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium">Status</label>
+                <select
+                  value={editForm.status}
+                  onChange={(event) =>
+                    setEditForm((form) => ({ ...form, status: event.target.value }))
+                  }
+                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="graduated">Graduated</option>
+                  <option value="withdrawn">Withdrawn</option>
+                </select>
+              </div>
+
+              <div className="flex items-end gap-3 sm:col-span-2 lg:col-span-3">
+                <button
+                  type="submit"
+                  className="rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground transition hover:opacity-90"
+                >
+                  Save Changes
+                </button>
+
+                <button
+                  type="button"
+                  onClick={closeEdit}
+                  className="rounded-lg border px-5 py-3 font-semibold hover:bg-muted"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
+
         <section className="mb-6 rounded-xl border bg-card p-5">
           <div className="grid gap-4 lg:grid-cols-[1fr_220px_220px]">
             <div>

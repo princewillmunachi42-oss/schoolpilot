@@ -185,24 +185,37 @@ export default async function TeacherDashboardPage() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="hidden text-right sm:block">
-                  <p className="text-sm font-semibold">
-                    {teacher.staff.first_name} {teacher.staff.last_name}
-                  </p>
+              <details className="relative">
+  <summary className="flex cursor-pointer list-none items-center gap-3 rounded-xl p-1 hover:bg-muted">
+    <div className="hidden text-right sm:block">
+      <p className="text-sm font-semibold">
+        {teacher.staff.first_name} {teacher.staff.last_name}
+      </p>
 
-                  <p className="text-xs capitalize text-muted-foreground">
-                    Teacher
-                  </p>
-                </div>
+      <p className="text-xs capitalize text-muted-foreground">
+        Teacher
+      </p>
+    </div>
 
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                  {teacher.staff.first_name.charAt(0)}
-                  {teacher.staff.last_name.charAt(0)}
-                </div>
-              </div>
-            </div>
+    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+      {teacher.staff.first_name.charAt(0)}
+      {teacher.staff.last_name.charAt(0)}
+    </div>
+  </summary>
 
+  <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border bg-card p-2 shadow-lg">
+    <form action="/api/auth/logout" method="POST">
+      <button
+        type="submit"
+        className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium hover:bg-muted"
+      >
+        Logout
+      </button>
+    </form>
+  </div>
+</details>
+
+</div>
             <div className="overflow-x-auto border-t lg:hidden">
               <nav className="flex min-w-max gap-1 p-2">
                 <a

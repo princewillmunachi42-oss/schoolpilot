@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
-
+import TeacherAssignmentActions from "@/components/TeacherAssignmentActions";
 export default async function TeacherAssignmentsPage() {
   const user = await getCurrentUser();
 
@@ -376,7 +376,12 @@ export default async function TeacherAssignmentsPage() {
                     <p className="mt-1 text-sm text-muted-foreground">
                       Staff ID: {assignment.staff_id}
                     </p>
-
+                   <div className="mt-4 border-t pt-4">
+  <TeacherAssignmentActions
+    id={assignment.id}
+    assignmentType="class"
+  />
+</div>
                     <p className="mt-1 text-sm text-muted-foreground">
                       Class: {assignment.class_name}
                     </p>
@@ -435,6 +440,12 @@ export default async function TeacherAssignmentsPage() {
                     Class:{" "}
                     {assignment.class_name || "General assignment"}
                   </p>
+                 <div className="mt-4 border-t pt-4">
+  <TeacherAssignmentActions
+    id={assignment.id}
+    assignmentType="subject"
+  />
+</div>
                 </div>
               ))}
             </div>

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
-
+import TermActions from "@/components/TermActions";
 export default async function TermsPage() {
   const user = await getCurrentUser();
 
@@ -242,6 +242,7 @@ export default async function TermsPage() {
                       key={term.id}
                       className="rounded-xl border p-4"
                     >
+                <TermActions id={term.id} />
                       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">

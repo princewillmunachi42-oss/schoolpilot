@@ -101,8 +101,10 @@ export default async function DashboardPage() {
     { label: "Students", href: "/dashboard/students" }, 
     { label: "Parents", href: "/dashboard/parents" },
     { label: "Teacher Assignments", href: "/dashboard/teacher-assignments" },
-    { label: "Timetable", href: "/dashboard/timetable" }, 
-    { label: "Timetable Periods", href: "/dashboard/timetable-periods" },];
+    { label: "Timetable", href: "/dashboard/timetable" },
+{ label: "Timetable Periods", href: "/dashboard/timetable-periods" },
+{ label: "Announcements", href: "/dashboard/announcements" },
+];
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="flex min-h-screen">
@@ -185,24 +187,36 @@ export default async function DashboardPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="hidden text-right sm:block">
-                  <p className="text-sm font-semibold">
-                    {user.first_name} {user.last_name}
-                  </p>
+              <details className="relative">
+  <summary className="flex cursor-pointer list-none items-center gap-3 rounded-xl p-1 hover:bg-muted">
+    <div className="hidden text-right sm:block">
+      <p className="text-sm font-semibold">
+        {user.first_name} {user.last_name}
+      </p>
 
-                  <p className="text-xs capitalize text-muted-foreground">
-                    {membership.role}
-                  </p>
-                </div>
+      <p className="text-xs capitalize text-muted-foreground">
+        {membership.role}
+      </p>
+    </div>
 
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                  {user.first_name.charAt(0)}
-                  {user.last_name.charAt(0)}
-                </div>
-              </div>
-            </div>
+    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+      {user.first_name.charAt(0)}
+      {user.last_name.charAt(0)}
+    </div>
+  </summary>
 
+  <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border bg-card p-2 shadow-lg">
+    <form action="/api/auth/logout" method="POST">
+      <button
+        type="submit"
+        className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium hover:bg-muted"
+      >
+        Logout
+      </button>
+    </form>
+  </div>
+</details>
+</div>
             {/* Mobile navigation */}
             <div className="overflow-x-auto border-t lg:hidden">
               <nav className="flex min-w-max gap-1 p-2">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
+import StaffActions from "@/components/StaffActions";
 
 export default async function StaffPage() {
   const user = await getCurrentUser();
@@ -291,15 +292,19 @@ export default async function StaffPage() {
                     )}
                   </div>
 
-                  <span
-                    className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${
-                      member.status === "active"
-                        ? "bg-success/10 text-success"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {member.status}
-                  </span>
+                  <div className="flex flex-col items-start gap-3 sm:items-end">
+  <span
+    className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${
+      member.status === "active"
+        ? "bg-success/10 text-success"
+        : "bg-muted text-muted-foreground"
+    }`}
+  >
+    {member.status}
+  </span>
+
+  <StaffActions id={member.id} />
+</div>
                 </div>
               ))}
             </div>

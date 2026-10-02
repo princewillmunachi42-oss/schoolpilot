@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
-
+import SessionActions from "@/components/SessionActions";
 export default async function SessionsPage() {
   const user = await getCurrentUser();
 
@@ -191,7 +191,7 @@ export default async function SessionsPage() {
                           <h3 className="font-semibold">
                             {session.name}
                           </h3>
-
+             <SessionActions id={session.id} />
                           {session.is_current && (
                             <span className="rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">
                               Current

@@ -1,38 +1,36 @@
-	import { NextRequest, NextResponse } from "next/server";
-	import pool from "@/lib/db";
+import { NextRequest, NextResponse } from "next/server";
+import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
+
+async function getOwnerSchool(userId: string) {
+  const result = await pool.query(
+    `SELECT school_id
+     FROM school_members
+     WHERE user_id = $1
+       AND role = 'owner'
+     LIMIT 1`,
+    [userId]
+  );
+
+  return result.rows[0] ?? null;
+}
 
 export async function GET() {
   const user = await getCurrentUser();
 
   if (!user) {
     return NextResponse.json(
-      {
-        success: false,
-        message: "Unauthorized",
-      },
+      { success: false, message: "Unauthorized." },
       { status: 401 }
     );
   }
 
-  const membershipResult = await pool.query(
-    `SELECT school_id
-     FROM school_members
-     WHERE user_id = $1
-       AND role = 'owner'
-     LIMIT 1`,
-    [user.id]
-  );
-
-  const membership = membershipResult.rows[0];
+  const membership = await getOwnerSchool(user.id);
 
   if (!membership) {
     return NextResponse.json(
-      {
-        success: false,
-        message: "School membership not found.",
-      },
+      { success: false, message: "School membership not found." },
       { status: 403 }
     );
   }
@@ -44,11 +42,13 @@ export async function GET() {
        first_name,
        last_name,
        other_name,
+       email,
+       phone,
        role_title,
+       photo_url,
        status
      FROM staff
      WHERE school_id = $1
-       AND status = 'active'
      ORDER BY first_name ASC, last_name ASC`,
     [membership.school_id]
   );
@@ -95,20 +95,14 @@ export async function POST(request: NextRequest) {
 
   if (status !== "active" && status !== "inactive") {
     return NextResponse.json(
-      {
-        success: false,
-        message: "Invalid staff status.",
-      },
+      { success: false, message: "Invalid staff status." },
       { status: 400 }
     );
   }
 
   if (staffId.length > 50) {
     return NextResponse.json(
-      {
-        success: false,
-        message: "Staff ID must be 50 characters or fewer.",
-      },
+      { success: false, message: "Staff ID must be 50 characters or fewer." },
       { status: 400 }
     );
   }
@@ -153,17 +147,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const membershipResult = await pool.query(
-    `SELECT school_id, role
-     FROM school_members
-     WHERE user_id = $1
-     LIMIT 1`,
-    [user.id]
-  );
+  const membership = await getOwnerSchool(user.id);
 
-  const membership = membershipResult.rows[0];
-
-  if (!membership || membership.role !== "owner") {
+  if (!membership) {
     return NextResponse.json(
       {
         success: false,
@@ -283,6 +269,305 @@ export async function POST(request: NextRequest) {
         success: false,
         message:
           "Unable to add staff member. The Staff ID may already exist in this school.",
+      },
+      { status: 500 }
+    );
+  } finally {
+    client.release();
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { success: false, message: "Unauthorized." },
+      { status: 401 }
+    );
+  }
+
+  const membership = await getOwnerSchool(user.id);
+
+  if (!membership) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Only the school owner can manage staff.",
+      },
+      { status: 403 }
+    );
+  }
+
+  const body = await request.json();
+
+  const id = String(body.id ?? "").trim();
+  const staffId = String(body.staffId ?? "").trim().toUpperCase();
+  const firstName = String(body.firstName ?? "").trim();
+  const lastName = String(body.lastName ?? "").trim();
+  const otherName = String(body.otherName ?? "").trim();
+  const email = String(body.email ?? "").trim().toLowerCase();
+  const phone = String(body.phone ?? "").trim();
+  const roleTitle = String(body.roleTitle ?? "").trim();
+  const status = String(body.status ?? "active").trim();
+
+  if (!id || !staffId || !firstName || !lastName) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Staff ID, first name and last name are required.",
+      },
+      { status: 400 }
+    );
+  }
+
+  if (status !== "active" && status !== "inactive") {
+    return NextResponse.json(
+      { success: false, message: "Invalid staff status." },
+      { status: 400 }
+    );
+  }
+
+  if (staffId.length > 50) {
+    return NextResponse.json(
+      { success: false, message: "Staff ID must be 50 characters or fewer." },
+      { status: 400 }
+    );
+  }
+
+  if (firstName.length > 100 || lastName.length > 100) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "First name and last name must be 100 characters or fewer.",
+      },
+      { status: 400 }
+    );
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const existingResult = await client.query(
+      `SELECT user_id
+       FROM staff
+       WHERE id = $1
+         AND school_id = $2
+       LIMIT 1`,
+      [id, membership.school_id]
+    );
+
+    if (existingResult.rows.length === 0) {
+      await client.query("ROLLBACK");
+
+      return NextResponse.json(
+        { success: false, message: "Staff member not found." },
+        { status: 404 }
+      );
+    }
+
+    const staffUserId = existingResult.rows[0].user_id;
+
+    const duplicateResult = await client.query(
+      `SELECT id
+       FROM staff
+       WHERE school_id = $1
+         AND upper(staff_id) = upper($2)
+         AND id <> $3
+       LIMIT 1`,
+      [membership.school_id, staffId, id]
+    );
+
+    if (duplicateResult.rows.length > 0) {
+      await client.query("ROLLBACK");
+
+      return NextResponse.json(
+        {
+          success: false,
+          message: "A staff member with this Staff ID already exists.",
+        },
+        { status: 409 }
+      );
+    }
+
+    if (email && staffUserId) {
+      const emailUserResult = await client.query(
+        `SELECT id
+         FROM users
+         WHERE lower(email) = lower($1)
+           AND id <> $2
+         LIMIT 1`,
+        [email, staffUserId]
+      );
+
+      if (emailUserResult.rows.length > 0) {
+        await client.query("ROLLBACK");
+
+        return NextResponse.json(
+          {
+            success: false,
+            message: "A user account with this email already exists.",
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    await client.query(
+      `UPDATE staff
+       SET
+         staff_id = $1,
+         first_name = $2,
+         last_name = $3,
+         other_name = $4,
+         email = $5,
+         phone = $6,
+         role_title = $7,
+         status = $8,
+         updated_at = NOW()
+       WHERE id = $9
+         AND school_id = $10`,
+      [
+        staffId,
+        firstName,
+        lastName,
+        otherName || null,
+        email || null,
+        phone || null,
+        roleTitle || null,
+        status,
+        id,
+        membership.school_id,
+      ]
+    );
+
+    if (staffUserId) {
+      await client.query(
+        `UPDATE users
+         SET
+           first_name = $1,
+           last_name = $2,
+           phone = $3,
+           status = $4
+         WHERE id = $5`,
+        [
+          firstName,
+          lastName,
+          phone || null,
+          status === "active" ? "active" : "inactive",
+          staffUserId,
+        ]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    return NextResponse.json({
+      success: true,
+      message: "Staff member updated successfully.",
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+
+    console.error("Staff update error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to update staff member.",
+      },
+      { status: 500 }
+    );
+  } finally {
+    client.release();
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { success: false, message: "Unauthorized." },
+      { status: 401 }
+    );
+  }
+
+  const membership = await getOwnerSchool(user.id);
+
+  if (!membership) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Only the school owner can manage staff.",
+      },
+      { status: 403 }
+    );
+  }
+
+  const body = await request.json();
+  const id = String(body.id ?? "").trim();
+
+  if (!id) {
+    return NextResponse.json(
+      { success: false, message: "Staff ID is required." },
+      { status: 400 }
+    );
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const result = await client.query(
+      `UPDATE staff
+       SET
+         status = 'inactive',
+         updated_at = NOW()
+       WHERE id = $1
+         AND school_id = $2
+       RETURNING user_id`,
+      [id, membership.school_id]
+    );
+
+    if (result.rows.length === 0) {
+      await client.query("ROLLBACK");
+
+      return NextResponse.json(
+        { success: false, message: "Staff member not found." },
+        { status: 404 }
+      );
+    }
+
+    const userId = result.rows[0].user_id;
+
+    if (userId) {
+      await client.query(
+        `UPDATE users
+         SET status = 'inactive'
+         WHERE id = $1`,
+        [userId]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    return NextResponse.json({
+      success: true,
+      message: "Staff member deactivated successfully.",
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+
+    console.error("Staff deactivation error.");
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Unable to deactivate staff member.",
       },
       { status: 500 }
     );

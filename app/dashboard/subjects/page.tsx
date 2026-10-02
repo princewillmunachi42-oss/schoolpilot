@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import pool from "@/lib/db";
+import SubjectActions from "@/components/SubjectActions";
 import { getCurrentUser } from "@/lib/auth/session";
 
 export default async function SubjectsPage() {
@@ -27,6 +28,7 @@ export default async function SubjectsPage() {
   const subjectsResult = await pool.query(
     `SELECT
        id,
+       status,
        name,
        code,
        created_at
@@ -150,9 +152,19 @@ export default async function SubjectsPage() {
                     </p>
                   </div>
 
-                  <span className="inline-flex w-fit rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                    Active
-                  </span>
+                 <div className="flex flex-col items-start gap-3 sm:items-end">
+  <span
+    className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${
+      subject.status === "active"
+        ? "bg-success/10 text-success"
+        : "bg-muted text-muted-foreground"
+    }`}
+  >
+    {subject.status}
+  </span>
+
+  <SubjectActions id={subject.id} />
+</div>
                 </div>
               ))}
             </div>
