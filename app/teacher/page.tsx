@@ -259,7 +259,19 @@ export default async function TeacherDashboardPage() {
                 >
                   Results
                 </a>
+                              <a
+                  href="/teacher/assignments"
+                  className="rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted"
+                >
+                  Assignments
+                </a>
 
+                <a
+                  href="/teacher/announcements"
+                  className="rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted"
+                >
+                  Announcements
+                </a>
                 <a
                   href="/teacher/profile"
                   className="rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted"
