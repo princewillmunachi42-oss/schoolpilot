@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
-
+import DeleteParentButton from "./DeleteParentButton";
+import EditParentButton from "./EditParentButton";
 export default async function ParentsPage() {
   const user = await getCurrentUser();
 
@@ -95,21 +96,45 @@ export default async function ParentsPage() {
             </div>
 
             <div>
-              <label
-                htmlFor="email"
-                className="mb-2 block text-sm font-medium"
-              >
-                Email
-              </label>
+  <label
+    htmlFor="email"
+    className="mb-2 block text-sm font-medium"
+  >
+    Email
+  </label>
 
-              <input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="parent@example.com"
-                className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:border-primary"
-              />
-            </div>
+  <input
+    id="email"
+    name="email"
+    type="email"
+    required
+    placeholder="parent@example.com"
+    className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none"
+  />
+</div>
+<div>
+  <label
+    htmlFor="password"
+    className="mb-2 block text-sm font-medium"
+  >
+    Login Password
+  </label>
+
+  <input
+    id="password"
+    name="password"
+    type="password"
+    required
+    minLength={8}
+    autoComplete="new-password"
+    className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
+    placeholder="Minimum 8 characters"
+  />
+
+  <p className="mt-1 text-xs text-muted-foreground">
+    This password will be used by the parent to sign in.
+  </p>
+</div>
 
             <div>
               <label
@@ -222,15 +247,24 @@ export default async function ParentsPage() {
                     )}
                   </div>
 
-                  <span
-                    className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${
-                      parent.status === "active"
-                        ? "bg-success/10 text-success"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {parent.status}
-                  </span>
+                                                     <div className="flex flex-wrap items-center gap-3">
+                    <span
+                      className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${
+                        parent.status === "active"
+                          ? "bg-success/10 text-success"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {parent.status}
+                    </span>
+
+                    <EditParentButton parent={parent} />
+
+                    <DeleteParentButton
+                      parentId={parent.id}
+                      parentName={parent.full_name}
+                    />
+                  </div>
                 </div>
               ))}
             </div>

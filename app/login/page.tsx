@@ -35,7 +35,13 @@ export default function LoginPage() {
         return;
       }
 
-      window.location.href = "/dashboard";
+      const role = data.memberships?.[0]?.role;
+
+if (role === "parent") {
+  window.location.href = "/parent";
+} else {
+  window.location.href = "/dashboard";
+}
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

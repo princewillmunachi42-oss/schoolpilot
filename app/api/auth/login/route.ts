@@ -84,7 +84,11 @@ export async function POST(request: NextRequest) {
        ORDER BY sm.created_at ASC`,
       [user.id]
     );
-
+         console.log("LOGIN DEBUG:", {
+      email: user.email,
+      userId: user.id,
+      memberships: membershipResult.rows,
+    });
     return Response.json({
       success: true,
       message: "Login successful.",
