@@ -61,3 +61,87 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+export async function PATCH(request: Request) {
+  try {
+    const parent = await getCurrentParent();
+
+    if (!parent) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Unauthorized.",
+        },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+
+    if (body.markAll === true) {
+      await pool.query(
+        `UPDATE notifications
+         SET is_read = TRUE
+         WHERE school_id = $1
+           AND user_id = $2
+           AND is_read = FALSE`,
+        [parent.schoolId, parent.userId]
+      );
+
+      return NextResponse.json({
+        success: true,
+        message: "All notifications marked as read.",
+      });
+    }
+
+    const notificationId = body.notificationId;
+
+    if (!notificationId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Notification ID is required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const result = await pool.query(
+      `UPDATE notifications
+       SET is_read = TRUE
+       WHERE id = $1
+         AND school_id = $2
+         AND user_id = $3
+       RETURNING id`,
+      [
+        notificationId,
+        parent.schoolId,
+        parent.userId,
+      ]
+    );
+
+    if (result.rowCount === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Notification not found.",
+        },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Notification marked as read.",
+    });
+  } catch (error) {
+    console.error("Parent notifications PATCH error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to update notification.",
+      },
+      { status: 500 }
+    );
+  }
+}

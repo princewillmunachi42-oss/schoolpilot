@@ -81,6 +81,42 @@ function formatDateTime(value: string) {
 }
 
 export default function ParentCommunicationsPage() {
+  async function markCommunicationAsRead(communicationId: string) {
+    try {
+      const response = await fetch("/api/parent/communications", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          communicationId,
+        }),
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      setData((current) => {
+        if (!current) return current;
+
+        return {
+          ...current,
+          communications: current.communications.map((communication) =>
+            communication.id === communicationId
+              ? { ...communication, is_read: true }
+              : communication
+          ),
+          unreadCount: Math.max(0, current.unreadCount - 1),
+        };
+      });
+    } catch (error) {
+      console.error(
+        "Failed to mark communication as read:",
+        error
+      );
+    }
+  }
   const [data, setData] = useState<CommunicationsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -210,8 +246,13 @@ export default function ParentCommunicationsPage() {
             <div className="mt-5 space-y-3">
               {data.communications.map((communication) => (
                 <article
-                  key={communication.id}
-                  className={`rounded-xl border p-4 ${
+  key={communication.id}
+  onClick={() => {
+    if (!communication.is_read) {
+      markCommunicationAsRead(communication.id);
+    }
+  }}
+  className={`cursor-pointer rounded-xl border p-4 ${
                     communication.is_read
                       ? "bg-white dark:border-gray-700 dark:bg-gray-900"
                       : "border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30"

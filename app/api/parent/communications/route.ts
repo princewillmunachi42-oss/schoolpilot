@@ -145,3 +145,85 @@ export async function GET() {
     unreadCount,
   });
 }
+export async function PATCH(request: Request) {
+  try {
+    const parent = await getCurrentParent();
+
+    if (!parent) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Parent account not found.",
+        },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const communicationId = body.communicationId;
+
+    if (!communicationId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Communication ID is required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const result = await pool.query(
+      `UPDATE communications
+       SET is_read = TRUE
+       WHERE id = $1
+         AND school_id = $2
+         AND recipient_user_id = $3
+       RETURNING id`,
+      [
+        communicationId,
+        parent.schoolId,
+        parent.userId,
+      ]
+    );
+
+    if (result.rowCount === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Communication not found.",
+        },
+        { status: 404 }
+      );
+    }
+
+        await pool.query(
+      `UPDATE notifications
+       SET is_read = TRUE
+       WHERE school_id = $1
+         AND user_id = $2
+         AND type = 'communication'
+         AND link = $3
+         AND is_read = FALSE`,
+      [
+        parent.schoolId,
+        parent.userId,
+        `/parent/communications?communicationId=${communicationId}`,
+      ]
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: "Communication marked as read.",
+    });
+  } catch (error) {
+    console.error("Parent communications PATCH error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to mark communication as read.",
+      },
+      { status: 500 }
+    );
+  }
+}

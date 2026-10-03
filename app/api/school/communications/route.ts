@@ -293,7 +293,25 @@ export async function POST(request: NextRequest) {
       type,
     ]
   );
-
+  await pool.query(
+    `INSERT INTO notifications (
+       school_id,
+       user_id,
+       title,
+       message,
+       type,
+       link
+     )
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [
+      membership.school_id,
+      recipientUserId,
+      subject,
+      message,
+      "communication",
+      `/parent/communications?communicationId=${result.rows[0].id}`,
+    ]
+  );
   return NextResponse.json(
     {
       success: true,
