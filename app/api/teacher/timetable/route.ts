@@ -9,7 +9,7 @@ export async function GET() {
     if (!teacher) {
       return NextResponse.json(
         { error: "Unauthorized" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -20,14 +20,9 @@ export async function GET() {
          te.room,
          te.is_active,
 
-         te.academic_session_id,
-         te.term_id,
          te.period_id,
          te.class_id,
          te.subject_id,
-
-         ap.name AS session_name,
-         t.name AS term_name,
 
          tp.name AS period_name,
          tp.period_number,
@@ -41,14 +36,6 @@ export async function GET() {
          s.code AS subject_code
 
        FROM timetable_entries te
-
-       INNER JOIN academic_sessions ap
-         ON ap.id = te.academic_session_id
-        AND ap.school_id = te.school_id
-
-       INNER JOIN terms t
-         ON t.id = te.term_id
-        AND t.school_id = te.school_id
 
        INNER JOIN timetable_periods tp
          ON tp.id = te.period_id
@@ -69,7 +56,7 @@ export async function GET() {
        ORDER BY
          te.day_of_week ASC,
          tp.period_number ASC`,
-      [teacher.schoolId, teacher.staffId]
+      [teacher.schoolId, teacher.staffId],
     );
 
     return NextResponse.json({
@@ -80,7 +67,9 @@ export async function GET() {
 
     return NextResponse.json(
       { error: "Failed to load your timetable." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
+
+

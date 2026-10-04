@@ -13,29 +13,14 @@ type Child = {
   class_name?: string | null;
 };
 
-type Session = {
-  id: string;
-  name: string;
-};
-
-type Term = {
-  id: string;
-  name: string;
-  academic_session_id: string;
-};
-
 type TimetableEntry = {
   id: string;
   day_of_week: number;
   room?: string | null;
   is_active: boolean;
-  academic_session_id: string;
-  term_id: string;
   period_id: string;
   class_id: string;
   subject_id: string;
-  session_name: string;
-  term_name: string;
   period_name: string;
   period_number: number;
   start_time: string;
@@ -49,8 +34,6 @@ type TimetableEntry = {
 type ApiResponse = {
   children: Child[];
   selectedStudentId: string;
-  sessions: Session[];
-  terms: Term[];
   timetable: TimetableEntry[];
   error?: string;
 };
@@ -84,14 +67,8 @@ export default function ParentTimetablePage() {
   const [error, setError] = useState("");
 
   const [studentId, setStudentId] = useState("");
-  const [sessionId, setSessionId] = useState("");
-  const [termId, setTermId] = useState("");
 
-  async function loadTimetable(
-    selectedStudent = studentId,
-    selectedSession = sessionId,
-    selectedTerm = termId
-  ) {
+  async function loadTimetable(selectedStudent = studentId) {
     try {
       setLoading(true);
       setError("");
@@ -102,26 +79,18 @@ export default function ParentTimetablePage() {
         params.set("student", selectedStudent);
       }
 
-      if (selectedSession) {
-        params.set("session", selectedSession);
-      }
-
-      if (selectedTerm) {
-        params.set("term", selectedTerm);
-      }
-
       const response = await fetch(
         `/api/parent/timetable?${params.toString()}`,
         {
           cache: "no-store",
-        }
+        },
       );
 
       const result = await response.json();
 
       if (!response.ok) {
         throw new Error(
-          result.error || "Failed to load timetable."
+          result.error || "Failed to load timetable.",
         );
       }
 
@@ -134,7 +103,7 @@ export default function ParentTimetablePage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Failed to load timetable."
+          : "Failed to load timetable.",
       );
     } finally {
       setLoading(false);
@@ -149,20 +118,10 @@ export default function ParentTimetablePage() {
   const selectedChild = useMemo(
     () =>
       data?.children.find(
-        (child) => child.id === studentId
+        (child) => child.id === studentId,
       ),
-    [data?.children, studentId]
+    [data?.children, studentId],
   );
-
-  const filteredTerms = useMemo(() => {
-    if (!data) return [];
-
-    if (!sessionId) return data.terms;
-
-    return data.terms.filter(
-      (term) => term.academic_session_id === sessionId
-    );
-  }, [data, sessionId]);
 
   const timetableByDay = useMemo(() => {
     const grouped: Record<number, TimetableEntry[]> = {};
@@ -184,28 +143,7 @@ export default function ParentTimetablePage() {
 
   function handleStudentChange(value: string) {
     setStudentId(value);
-    loadTimetable(value, sessionId, termId);
-  }
-
-  function handleSessionChange(value: string) {
-    setSessionId(value);
-
-    const validTerm = data?.terms.find(
-      (term) =>
-        term.id === termId &&
-        (!value ||
-          term.academic_session_id === value)
-    );
-
-    const nextTerm = validTerm ? termId : "";
-
-    setTermId(nextTerm);
-    loadTimetable(studentId, value, nextTerm);
-  }
-
-  function handleTermChange(value: string) {
-    setTermId(value);
-    loadTimetable(studentId, sessionId, value);
+    loadTimetable(value);
   }
 
   return (
@@ -252,118 +190,44 @@ export default function ParentTimetablePage() {
             </p>
           </div>
         ) : (
-          /*
-           * ONE MAIN PARENT PORTAL CARD
-           */
           <section className="rounded-2xl border bg-white p-5 shadow-sm">
 
-            {/* Filters */}
+            {/* Child Filter */}
             <div className="border-b pb-5">
               <h2 className="font-semibold text-gray-900">
                 Timetable
               </h2>
 
               <p className="mt-1 text-sm text-gray-500">
-                Select the child, academic session and term.
+                Select a child to view their class timetable.
               </p>
 
-              <div className="mt-4 grid gap-4 md:grid-cols-3">
+              <div className="mt-4 max-w-md">
+                <label
+                  htmlFor="student"
+                  className="mb-2 block text-sm font-medium text-gray-700"
+                >
+                  Child
+                </label>
 
-                <div>
-                  <label
-                    htmlFor="student"
-                    className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Child
-                  </label>
-
-                  <select
-                    id="student"
-                    value={studentId}
-                    onChange={(event) =>
-                      handleStudentChange(
-                        event.target.value
-                      )
-                    }
-                    className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-blue-500"
-                  >
-                    {data.children.map((child) => (
-                      <option
-                        key={child.id}
-                        value={child.id}
-                      >
-                        {child.first_name}{" "}
-                        {child.last_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="session"
-                    className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Academic Session
-                  </label>
-
-                  <select
-                    id="session"
-                    value={sessionId}
-                    onChange={(event) =>
-                      handleSessionChange(
-                        event.target.value
-                      )
-                    }
-                    className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-blue-500"
-                  >
-                    <option value="">
-                      All Sessions
+                <select
+                  id="student"
+                  value={studentId}
+                  onChange={(event) =>
+                    handleStudentChange(event.target.value)
+                  }
+                  className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-blue-500"
+                >
+                  {data.children.map((child) => (
+                    <option
+                      key={child.id}
+                      value={child.id}
+                    >
+                      {child.first_name}{" "}
+                      {child.last_name}
                     </option>
-
-                    {data.sessions.map((session) => (
-                      <option
-                        key={session.id}
-                        value={session.id}
-                      >
-                        {session.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="term"
-                    className="mb-2 block text-sm font-medium text-gray-700"
-                  >
-                    Term
-                  </label>
-
-                  <select
-                    id="term"
-                    value={termId}
-                    onChange={(event) =>
-                      handleTermChange(
-                        event.target.value
-                      )
-                    }
-                    className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-blue-500"
-                  >
-                    <option value="">
-                      All Terms
-                    </option>
-
-                    {filteredTerms.map((term) => (
-                      <option
-                        key={term.id}
-                        value={term.id}
-                      >
-                        {term.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -398,8 +262,8 @@ export default function ParentTimetablePage() {
                   </h2>
 
                   <p className="mt-2 text-sm text-gray-500">
-                    There are no timetable entries for the
-                    selected child and filters.
+                    There are no timetable entries for this
+                    child&apos;s current class.
                   </p>
                 </div>
               ) : (
@@ -442,11 +306,11 @@ export default function ParentTimetablePage() {
                                   <div>
                                     <p className="text-sm font-semibold text-gray-900">
                                       {formatTime(
-                                        entry.start_time
+                                        entry.start_time,
                                       )}{" "}
                                       –{" "}
                                       {formatTime(
-                                        entry.end_time
+                                        entry.end_time,
                                       )}
                                     </p>
 
@@ -482,12 +346,6 @@ export default function ParentTimetablePage() {
                                         </p>
                                       </>
                                     )}
-
-                                    <p className="mt-2 text-xs text-gray-500">
-                                      {entry.session_name}{" "}
-                                      •{" "}
-                                      {entry.term_name}
-                                    </p>
                                   </div>
 
                                   <div className="md:text-right">

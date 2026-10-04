@@ -6,9 +6,7 @@ type TimetableEntry = {
   id: string;
   day_of_week: number;
   room: string | null;
-  is_active: boolean;
-  session_name: string;
-  term_name: string;
+    is_active: boolean;
   period_name: string;
   period_number: number;
   start_time: string;
@@ -102,7 +100,7 @@ export default function TeacherTimetablePage() {
           </h1>
 
           <p className="mt-2 text-sm text-muted-foreground">
-            View your assigned teaching periods for the current timetable.
+         View your assigned teaching periods.
           </p>
         </div>
 

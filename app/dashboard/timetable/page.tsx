@@ -3,19 +3,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
-type Session = {
-  id: string;
-  name: string;
-  is_current?: boolean;
-};
-
-type Term = {
-  id: string;
-  name: string;
-  academic_session_id: string;
-  is_current?: boolean;
-};
-
 type Period = {
   id: string;
   name: string;
@@ -28,6 +15,7 @@ type Period = {
 type ClassItem = {
   id: string;
   name: string;
+  academic_session_id: string;
 };
 
 type Subject = {
@@ -45,17 +33,14 @@ type Staff = {
 
 type Entry = {
   id: string;
-  academic_session_id: string;
-  term_id: string;
   period_id: string;
   class_id: string;
   subject_id: string;
   staff_id: string;
   day_of_week: number;
   room: string | null;
+  is_active?: boolean;
   is_break?: boolean;
-  session_name: string;
-  term_name: string;
   period_name: string;
   period_number: number;
   start_time: string;
@@ -99,16 +84,12 @@ async function readJson(response: Response, label: string) {
 }
 
 export default function TimetablePage() {
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [terms, setTerms] = useState<Term[]>([]);
   const [periods, setPeriods] = useState<Period[]>([]);
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
 
-  const [sessionId, setSessionId] = useState("");
-  const [termId, setTermId] = useState("");
   const [periodId, setPeriodId] = useState("");
   const [classId, setClassId] = useState("");
   const [subjectId, setSubjectId] = useState("");
@@ -116,13 +97,11 @@ export default function TimetablePage() {
   const [dayOfWeek, setDayOfWeek] = useState("1");
   const [room, setRoom] = useState("");
 
-  const [viewSessionId, setViewSessionId] = useState("");
-  const [viewTermId, setViewTermId] = useState("");
   const [viewClassId, setViewClassId] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-    const [editingEntryId, setEditingEntryId] = useState("");
+  const [editingEntryId, setEditingEntryId] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -132,103 +111,123 @@ export default function TimetablePage() {
       setError("");
 
       const [
-        sessionsResponse,
-        termsResponse,
         periodsResponse,
         classesResponse,
         subjectsResponse,
         staffResponse,
         entriesResponse,
       ] = await Promise.all([
-        fetch("/api/school/sessions", { cache: "no-store" }),
-        fetch("/api/school/terms", { cache: "no-store" }),
-        fetch("/api/school/timetable-periods", { cache: "no-store" }),
-        fetch("/api/school/classes", { cache: "no-store" }),
-        fetch("/api/school/subjects", { cache: "no-store" }),
-        fetch("/api/school/staff", { cache: "no-store" }),
-        fetch("/api/school/timetable-entries", { cache: "no-store" }),
+        fetch("/api/school/timetable-periods", {
+          cache: "no-store",
+        }),
+        fetch("/api/school/classes", {
+          cache: "no-store",
+        }),
+        fetch("/api/school/subjects", {
+          cache: "no-store",
+        }),
+        fetch("/api/school/staff", {
+          cache: "no-store",
+        }),
+        fetch("/api/school/timetable-entries", {
+          cache: "no-store",
+        }),
       ]);
 
-      const sessionsData = await readJson(sessionsResponse, "Sessions");
-      const termsData = await readJson(termsResponse, "Terms");
       const periodsData = await readJson(
         periodsResponse,
         "Timetable periods",
       );
-      const classesData = await readJson(classesResponse, "Classes");
-      const subjectsData = await readJson(subjectsResponse, "Subjects");
-      const staffData = await readJson(staffResponse, "Staff");
+      const classesData = await readJson(
+        classesResponse,
+        "Classes",
+      );
+      const subjectsData = await readJson(
+        subjectsResponse,
+        "Subjects",
+      );
+      const staffData = await readJson(
+        staffResponse,
+        "Staff",
+      );
       const entriesData = await readJson(
         entriesResponse,
         "Timetable entries",
       );
 
-      if (!sessionsResponse.ok) {
-        throw new Error(sessionsData.error || "Failed to load sessions.");
-      }
-
-      if (!termsResponse.ok) {
-        throw new Error(termsData.error || "Failed to load terms.");
-      }
-
       if (!periodsResponse.ok) {
         throw new Error(
-          periodsData.error || "Failed to load timetable periods.",
+          periodsData.error ||
+            periodsData.message ||
+            "Failed to load timetable periods.",
         );
       }
 
       if (!classesResponse.ok) {
-        throw new Error(classesData.error || "Failed to load classes.");
+        throw new Error(
+          classesData.error ||
+            classesData.message ||
+            "Failed to load classes.",
+        );
       }
 
       if (!subjectsResponse.ok) {
-        throw new Error(subjectsData.error || "Failed to load subjects.");
+        throw new Error(
+          subjectsData.error ||
+            subjectsData.message ||
+            "Failed to load subjects.",
+        );
       }
 
       if (!staffResponse.ok) {
-        throw new Error(staffData.error || "Failed to load staff.");
+        throw new Error(
+          staffData.error ||
+            staffData.message ||
+            "Failed to load staff.",
+        );
       }
 
       if (!entriesResponse.ok) {
         throw new Error(
-          entriesData.error || "Failed to load timetable lessons.",
+          entriesData.error ||
+            entriesData.message ||
+            "Failed to load timetable lessons.",
         );
       }
 
-      const nextSessions: Session[] = sessionsData.sessions ?? [];
-      const nextTerms: Term[] = termsData.terms ?? [];
-      const nextPeriods: Period[] = periodsData.periods ?? [];
-      const nextClasses: ClassItem[] = classesData.classes ?? [];
-      const nextSubjects: Subject[] = subjectsData.subjects ?? [];
-      const nextStaff: Staff[] = staffData.staff ?? [];
-      const nextEntries: Entry[] = entriesData.entries ?? [];
+      const nextPeriods: Period[] =
+        periodsData.periods ?? [];
 
-      setSessions(nextSessions);
-      setTerms(nextTerms);
+      const nextClasses: ClassItem[] =
+        classesData.classes ?? [];
+
+      const nextSubjects: Subject[] =
+        subjectsData.subjects ?? [];
+
+      const nextStaff: Staff[] =
+        staffData.staff ?? [];
+
+      const nextEntries: Entry[] =
+        entriesData.entries ?? [];
+
       setPeriods(nextPeriods);
       setClasses(nextClasses);
       setSubjects(nextSubjects);
       setStaff(nextStaff);
       setEntries(nextEntries);
 
-      if (!sessionId && nextSessions.length > 0) {
-        const current =
-          nextSessions.find((item) => item.is_current) ??
-          nextSessions[0];
-
-        setSessionId(current.id);
+      if (
+        !classId &&
+        nextClasses.length > 0
+      ) {
+        setClassId(nextClasses[0].id);
       }
 
-      if (!viewSessionId && nextSessions.length > 0) {
-        const current =
-          nextSessions.find((item) => item.is_current) ??
-          nextSessions[0];
-
-        setViewSessionId(current.id);
-      }
-
-      if (!viewClassId && nextClasses.length > 0) {
-        setViewClassId(nextClasses[0].id);
+      if (
+        !viewClassId &&
+        nextClasses.length > 0
+      ) {
+        setViewClassId("");
       }
     } catch (err) {
       setError(
@@ -245,100 +244,30 @@ export default function TimetablePage() {
     loadData();
   }, []);
 
-  useEffect(() => {
-    if (!sessionId) {
-      setTermId("");
-      return;
-    }
-
-    const matchingTerms = terms.filter(
-      (term) => term.academic_session_id === sessionId,
-    );
-
-    if (
-      termId &&
-      matchingTerms.some((term) => term.id === termId)
-    ) {
-      return;
-    }
-
-    const current =
-      matchingTerms.find((term) => term.is_current) ??
-      matchingTerms[0];
-
-    setTermId(current?.id ?? "");
-  }, [sessionId, terms, termId]);
-
-  useEffect(() => {
-    if (!viewSessionId) {
-      setViewTermId("");
-      return;
-    }
-
-    const matchingTerms = terms.filter(
-      (term) => term.academic_session_id === viewSessionId,
-    );
-
-    if (
-      viewTermId &&
-      matchingTerms.some((term) => term.id === viewTermId)
-    ) {
-      return;
-    }
-
-    const current =
-      matchingTerms.find((term) => term.is_current) ??
-      matchingTerms[0];
-
-    setViewTermId(current?.id ?? "");
-  }, [viewSessionId, terms, viewTermId]);
-
-  const formTerms = useMemo(
-    () =>
-      terms.filter(
-        (term) => term.academic_session_id === sessionId,
-      ),
-    [terms, sessionId],
-  );
-
-  const viewTerms = useMemo(
-    () =>
-      terms.filter(
-        (term) => term.academic_session_id === viewSessionId,
-      ),
-    [terms, viewSessionId],
-  );
-
   const visibleEntries = useMemo(() => {
-    return entries.filter((entry) => {
-      if (
-        viewSessionId &&
-        entry.academic_session_id !== viewSessionId
-      ) {
-        return false;
-      }
+    if (!viewClassId) {
+      return entries;
+    }
 
-      if (viewTermId && entry.term_id !== viewTermId) {
-        return false;
-      }
+    return entries.filter(
+      (entry) => entry.class_id === viewClassId,
+    );
+  }, [entries, viewClassId]);
 
-      if (viewClassId && entry.class_id !== viewClassId) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [entries, viewSessionId, viewTermId, viewClassId]);
-
-  function getEntry(day: number, periodId: string) {
-    return visibleEntries.find(
+  function getEntries(
+    day: number,
+    periodId: string,
+  ) {
+    return visibleEntries.filter(
       (entry) =>
         entry.day_of_week === day &&
         entry.period_id === periodId,
     );
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
 
     try {
@@ -346,35 +275,46 @@ export default function TimetablePage() {
       setMessage("");
       setError("");
 
-      const response = await fetch("/api/school/timetable-entries", {
-        method: editingEntryId ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        "/api/school/timetable-entries",
+        {
+          method: editingEntryId ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: editingEntryId || undefined,
+            periodId,
+            classId,
+            subjectId,
+            staffId,
+            dayOfWeek: Number(dayOfWeek),
+            room,
+          }),
         },
-        body: JSON.stringify({
-  id: editingEntryId || undefined,
-  academicSessionId: sessionId,
-          termId,
-          periodId,
-          classId,
-          subjectId,
-          staffId,
-          dayOfWeek: Number(dayOfWeek),
-          room,
-        }),
-      });
+      );
 
-      const data = await readJson(response, "Timetable save");
+      const data = await readJson(
+        response,
+        "Timetable save",
+      );
 
       if (!response.ok) {
         throw new Error(
-          data.error || "Failed to create timetable lesson.",
+          data.error ||
+            data.message ||
+            "Failed to save timetable lesson.",
         );
       }
+
       setEditingEntryId("");
-      setMessage("Timetable lesson created successfully.");
+      setMessage(
+        editingEntryId
+          ? "Timetable lesson updated successfully."
+          : "Timetable lesson created successfully.",
+      );
+
       setPeriodId("");
-      setClassId("");
       setSubjectId("");
       setStaffId("");
       setRoom("");
@@ -384,27 +324,45 @@ export default function TimetablePage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Failed to create timetable lesson.",
+          : "Failed to save timetable lesson.",
       );
     } finally {
       setSaving(false);
     }
   }
-  async function handleEdit(entry: Entry) {
+
+  function handleEdit(entry: Entry) {
     setEditingEntryId(entry.id);
-    setSessionId(entry.academic_session_id);
-    setTermId(entry.term_id);
     setPeriodId(entry.period_id);
     setClassId(entry.class_id);
     setSubjectId(entry.subject_id);
     setStaffId(entry.staff_id);
     setDayOfWeek(String(entry.day_of_week));
     setRoom(entry.room ?? "");
-setMessage("Editing timetable lesson...");
-setError("");
+
+    setMessage(
+      "Editing timetable lesson...",
+    );
+    setError("");
   }
-    async function handleDelete(id: string) {
-    if (!window.confirm("Are you sure you want to delete this timetable lesson?")) {
+
+  function cancelEdit() {
+    setEditingEntryId("");
+    setPeriodId("");
+    setSubjectId("");
+    setStaffId("");
+    setRoom("");
+    setDayOfWeek("1");
+    setMessage("");
+    setError("");
+  }
+
+  async function handleDelete(id: string) {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this timetable lesson?",
+      )
+    ) {
       return;
     }
 
@@ -413,25 +371,38 @@ setError("");
       setMessage("");
       setError("");
 
-      const response = await fetch("/api/school/timetable-entries", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        "/api/school/timetable-entries",
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ id }),
         },
-        body: JSON.stringify({ id }),
-      });
+      );
 
-      const data = await readJson(response, "Timetable delete");
+      const data = await readJson(
+        response,
+        "Timetable delete",
+      );
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to delete timetable lesson.");
+        throw new Error(
+          data.error ||
+            data.message ||
+            "Failed to delete timetable lesson.",
+        );
       }
 
       if (editingEntryId === id) {
-        setEditingEntryId("");
+        cancelEdit();
       }
 
-      setMessage("Timetable lesson deleted successfully.");
+      setMessage(
+        "Timetable lesson deleted successfully.",
+      );
+
       await loadData();
     } catch (err) {
       setError(
@@ -443,10 +414,10 @@ setError("");
       setSaving(false);
     }
   }
+
   const sortedPeriods = [...periods].sort(
     (a, b) => a.period_number - b.period_number,
   );
-
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -493,56 +464,8 @@ setError("");
                   onSubmit={handleSubmit}
                   className="space-y-4"
                 >
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium">
-                      Academic Session
-                    </label>
+                  
 
-                    <select
-                      value={sessionId}
-                      onChange={(event) =>
-                        setSessionId(event.target.value)
-                      }
-                      required
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm"
-                    >
-                      <option value="">Select session</option>
-
-                      {sessions.map((session) => (
-                        <option
-                          key={session.id}
-                          value={session.id}
-                        >
-                          {session.name}
-                          {session.is_current ? " (Current)" : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium">
-                      Term
-                    </label>
-
-                    <select
-                      value={termId}
-                      onChange={(event) =>
-                        setTermId(event.target.value)
-                      }
-                      required
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm"
-                    >
-                      <option value="">Select term</option>
-
-                      {formTerms.map((term) => (
-                        <option key={term.id} value={term.id}>
-                          {term.name}
-                          {term.is_current ? " (Current)" : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
 
                   <div>
                     <label className="mb-1.5 block text-sm font-medium">
@@ -612,19 +535,18 @@ setError("");
                     >
                       <option value="">Select class</option>
 
-                      {classes.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                {classes.map((item) => (
+  <option key={item.id} value={item.id}>
+    {item.name}
+  </option>
+))}
+</select>
+</div>
 
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium">
-                      Subject
-                    </label>
-
+<div>
+  <label className="mb-1.5 block text-sm font-medium">
+    Subject
+  </label>
                     <select
                       value={subjectId}
                       onChange={(event) =>
@@ -716,52 +638,11 @@ setError("");
                     Weekly Timetable
                   </h2>
 
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Select a session, term and class to view the
-                    weekly schedule.
-                  </p>
+<p className="mt-1 text-sm text-muted-foreground">
+  Select a class to view its weekly schedule.
+</p>
                 </div>
 
-                <div className="mb-5 grid gap-3 sm:grid-cols-3">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                      Session
-                    </label>
-                    <select
-                      value={viewSessionId}
-                      onChange={(event) =>
-                        setViewSessionId(event.target.value)
-                      }
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="">All sessions</option>
-                      {sessions.map((session) => (
-                        <option key={session.id} value={session.id}>
-                          {session.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                      Term
-                    </label>
-                    <select
-                      value={viewTermId}
-                      onChange={(event) =>
-                        setViewTermId(event.target.value)
-                      }
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="">All terms</option>
-                      {viewTerms.map((term) => (
-                        <option key={term.id} value={term.id}>
-                          {term.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
 
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
@@ -782,113 +663,200 @@ setError("");
                       ))}
                     </select>
                   </div>
-                </div>
 
-                <div className="overflow-x-auto rounded-lg border border-border">
-                  <table className="w-full min-w-[1050px] border-collapse text-sm">
-                    <thead>
-                      <tr className="bg-muted/40">
-                        <th className="sticky left-0 z-10 w-32 border-b border-r border-border bg-muted/80 p-3 text-left font-semibold">
-                          Period
-                        </th>
-
-                        {days.map((day) => (
-                          <th
-                            key={day.value}
-                            className="min-w-[130px] border-b border-border p-3 text-left font-semibold"
-                          >
-                            {day.label}
+                   {viewClassId ? (
+                  <div className="overflow-x-auto rounded-lg border border-border">
+                    <table className="w-full min-w-[1050px] border-collapse text-sm">
+                      <thead>
+                        <tr className="bg-muted/40">
+                          <th className="sticky left-0 z-10 w-32 border-b border-r border-border bg-muted/80 p-3 text-left font-semibold">
+                            Period
                           </th>
-                        ))}
-                      </tr>
-                    </thead>
 
-                    <tbody>
-                      {sortedPeriods.length === 0 ? (
-                        <tr>
-                          <td
-                            colSpan={8}
-                            className="p-8 text-center text-muted-foreground"
-                          >
-                            No timetable periods have been configured yet.
-                          </td>
+                          {days.map((day) => (
+                            <th
+                              key={day.value}
+                              className="min-w-[130px] border-b border-border p-3 text-left font-semibold"
+                            >
+                              {day.label}
+                            </th>
+                          ))}
                         </tr>
-                      ) : (
-                        sortedPeriods.map((period) => (
-                          <tr key={period.id}>
-                            <td className="sticky left-0 z-10 border-r border-b border-border bg-card p-3 align-top">
-                              <div className="font-medium">
-                                {period.period_number}. {period.name}
-                              </div>
+                      </thead>
 
-                              <div className="mt-1 text-xs text-muted-foreground">
-                                {period.start_time.slice(0, 5)}–
-                                {period.end_time.slice(0, 5)}
-                              </div>
+                      <tbody>
+                        {sortedPeriods.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={8}
+                              className="p-8 text-center text-muted-foreground"
+                            >
+                              No timetable periods have been configured yet.
                             </td>
+                          </tr>
+                        ) : (
+                          sortedPeriods.map((period) => (
+                            <tr key={period.id}>
+                              <td className="sticky left-0 z-10 border-r border-b border-border bg-card p-3 align-top">
+                                <div className="font-medium">
+                                  {period.period_number}. {period.name}
+                                </div>
 
-                            {days.map((day) => {
-                              const entry = getEntry(
-                                day.value,
-                                period.id,
-                              );
+                                <div className="mt-1 text-xs text-muted-foreground">
+                                  {period.start_time.slice(0, 5)}–
+                                  {period.end_time.slice(0, 5)}
+                                </div>
+                              </td>
 
-                              if (period.is_break) {
+                              {days.map((day) => {
+                                const entry = getEntries(
+                                  day.value,
+                                  period.id,
+                                )[0];
+
+                                if (period.is_break) {
+                                  return (
+                                    <td
+                                      key={day.value}
+                                      className="border-b border-border bg-muted/20 p-3 align-top"
+                                    >
+                                      <div className="rounded-lg border border-dashed border-border p-3 text-center text-xs font-medium text-muted-foreground">
+                                        BREAK
+                                      </div>
+                                    </td>
+                                  );
+                                }
+
                                 return (
                                   <td
                                     key={day.value}
-                                    className="border-b border-border bg-muted/20 p-3 align-top"
+                                    className="border-b border-border p-2 align-top"
                                   >
-                                    <div className="rounded-lg border border-dashed border-border p-3 text-center text-xs font-medium text-muted-foreground">
-                                      BREAK
-                                    </div>
+                                    {entry ? (
+                                      <div className="min-h-[92px] rounded-lg border border-border bg-muted/30 p-3">
+                                        <div className="font-semibold">
+                                          {entry.subject_name}
+                                        </div>
+
+                                        <div className="mt-0.5 text-xs text-muted-foreground">
+                                          {entry.subject_code}
+                                        </div>
+
+                                        <div className="mt-3 text-xs">
+                                          <span className="font-medium">
+                                            {entry.teacher_first_name}{" "}
+                                            {entry.teacher_last_name}
+                                          </span>
+                                        </div>
+
+                                        {entry.room ? (
+                                          <div className="mt-1 text-xs text-muted-foreground">
+                                            Room: {entry.room}
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                    ) : (
+                                      <div className="flex min-h-[92px] items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">
+                                        —
+                                      </div>
+                                    )}
                                   </td>
                                 );
+                              })}
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-lg border border-border">
+                    {visibleEntries.length === 0 ? (
+                      <div className="p-8 text-center text-sm text-muted-foreground">
+No timetable lessons have been configured yet.                      </div>
+                    ) : (
+                      <table className="w-full min-w-[950px] border-collapse text-sm">
+                        <thead>
+                          <tr className="bg-muted/40">
+                            <th className="border-b border-border p-3 text-left font-semibold">
+                              Class
+                            </th>
+                            <th className="border-b border-border p-3 text-left font-semibold">
+                              Day
+                            </th>
+                            <th className="border-b border-border p-3 text-left font-semibold">
+                              Time
+                            </th>
+                            <th className="border-b border-border p-3 text-left font-semibold">
+                              Subject
+                            </th>
+                            <th className="border-b border-border p-3 text-left font-semibold">
+                              Teacher
+                            </th>
+                            <th className="border-b border-border p-3 text-left font-semibold">
+                              Room
+                            </th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {[...visibleEntries]
+                            .sort((a, b) => {
+                              const classCompare =
+                                a.class_name.localeCompare(b.class_name);
+
+                              if (classCompare !== 0) {
+                                return classCompare;
                               }
 
-                              return (
-                                <td
-                                  key={day.value}
-                                  className="border-b border-border p-2 align-top"
-                                >
-                                  {entry ? (
-                                    <div className="min-h-[92px] rounded-lg border border-border bg-muted/30 p-3">
-                                      <div className="font-semibold">
-                                        {entry.subject_name}
-                                      </div>
+                              if (a.day_of_week !== b.day_of_week) {
+                                return a.day_of_week - b.day_of_week;
+                              }
 
-                                      <div className="mt-0.5 text-xs text-muted-foreground">
-                                        {entry.subject_code}
-                                      </div>
-
-                                      <div className="mt-3 text-xs">
-                                        <span className="font-medium">
-                                          {entry.teacher_first_name}{" "}
-                                          {entry.teacher_last_name}
-                                        </span>
-                                      </div>
-
-                                      {entry.room ? (
-                                        <div className="mt-1 text-xs text-muted-foreground">
-                                          Room: {entry.room}
-                                        </div>
-                                      ) : null}
-                                    </div>
-                                  ) : (
-                                    <div className="flex min-h-[92px] items-center justify-center rounded-lg border border-dashed border-border text-xs text-muted-foreground">
-                                      —
-                                    </div>
-                                  )}
+                              return a.period_number - b.period_number;
+                            })
+                            .map((entry) => (
+                              <tr
+                                key={entry.id}
+                                className="border-b border-border last:border-b-0"
+                              >
+                                <td className="p-3 font-medium">
+                                  {entry.class_name}
                                 </td>
-                              );
-                            })}
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
 
+                                <td className="p-3">
+                                  {getDayName(entry.day_of_week)}
+                                </td>
+
+                                <td className="p-3 whitespace-nowrap">
+                                  {entry.start_time.slice(0, 5)}–
+                                  {entry.end_time.slice(0, 5)}
+                                </td>
+
+                                <td className="p-3">
+                                  <div className="font-medium">
+                                    {entry.subject_name}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {entry.subject_code}
+                                  </div>
+                                </td>
+
+                                <td className="p-3">
+                                  {entry.teacher_first_name}{" "}
+                                  {entry.teacher_last_name}
+                                </td>
+
+                                <td className="p-3">
+                                  {entry.room || "—"}
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                )}
                 <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                   <span>
                     Showing {visibleEntries.length} configured lesson
@@ -906,27 +874,7 @@ setError("");
                     </span>
                   ) : null}
 
-                  {viewSessionId ? (
-                    <span>
-                      Session:{" "}
-                      <strong className="font-medium text-foreground">
-                        {sessions.find(
-                          (item) => item.id === viewSessionId,
-                        )?.name ?? "Unknown"}
-                      </strong>
-                    </span>
-                  ) : null}
 
-                  {viewTermId ? (
-                    <span>
-                      Term:{" "}
-                      <strong className="font-medium text-foreground">
-                        {terms.find(
-                          (item) => item.id === viewTermId,
-                        )?.name ?? "Unknown"}
-                      </strong>
-                    </span>
-                  ) : null}
                 </div>
               </section>
 
@@ -993,19 +941,6 @@ setError("");
                             {entry.end_time.slice(0, 5)}
                           </div>
 
-                          <div>
-                            <span className="text-muted-foreground">
-                              Session:
-                            </span>{" "}
-                            {entry.session_name}
-                          </div>
-
-                          <div>
-                            <span className="text-muted-foreground">
-                              Term:
-                            </span>{" "}
-                            {entry.term_name}
-                          </div>
 
                           {entry.room ? (
                             <div>

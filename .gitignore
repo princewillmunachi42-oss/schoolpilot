@@ -44,3 +44,6 @@ next-env.d.ts
 schoolpilot-cookie.txt
 *.cookie
 storage/
+
+# Local database backups
+*_backup.sql

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
+import { processStudentPromotions } from "@/lib/academics/promotion";
 export async function GET() {
   const user = await getCurrentUser();
 
@@ -111,7 +112,17 @@ export async function POST(request: NextRequest) {
 
   try {
     await client.query("BEGIN");
+         const previousCurrentResult = await client.query(
+      `SELECT id
+       FROM academic_sessions
+       WHERE school_id = $1
+         AND is_current = true
+       LIMIT 1`,
+      [membership.school_id]
+    );
 
+    const previousSessionId =
+      previousCurrentResult.rows[0]?.id ?? null;
     if (isCurrent) {
       await client.query(
         `UPDATE academic_sessions
@@ -121,24 +132,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await client.query(
-      `INSERT INTO academic_sessions (
-         school_id,
-         name,
-         start_date,
-         end_date,
-         is_current
-       )
-       VALUES ($1, $2, $3, $4, $5)`,
-      [
-        membership.school_id,
-        name,
-        startDate,
-        endDate,
-        isCurrent,
-      ]
-    );
+    const newSessionResult = await client.query(
+  `INSERT INTO academic_sessions (
+     school_id,
+     name,
+     start_date,
+     end_date,
+     is_current
+   )
+   VALUES ($1, $2, $3, $4, $5)
+   RETURNING id`,
+  [
+    membership.school_id,
+    name,
+    startDate,
+    endDate,
+    isCurrent,
+  ]
+);
 
+const newSessionId = newSessionResult.rows[0].id;
+        if (isCurrent && previousSessionId) {
+      await processStudentPromotions(
+        client,
+        membership.school_id,
+        previousSessionId,
+        newSessionId
+      );
+    }
     await client.query("COMMIT");
 
     return NextResponse.redirect(
@@ -247,7 +268,82 @@ export async function PUT(request: NextRequest) {
         { status: 404 }
       );
     }
+        const previousCurrentResult = await client.query(
+      `SELECT id
+       FROM academic_sessions
+       WHERE school_id = $1
+         AND is_current = true
+         AND id <> $2
+       LIMIT 1`,
+      [membership.school_id, id]
+    );
 
+    const previousSessionId =
+      previousCurrentResult.rows[0]?.id ?? null;
+    if (isCurrent && previousSessionId) {
+      const pendingResult = await client.query(
+        `
+          SELECT COUNT(*)::int AS count
+          FROM student_enrollments se
+          JOIN students s
+            ON s.id = se.student_id
+           AND s.school_id = se.school_id
+          WHERE se.school_id = $1
+            AND se.academic_session_id = $2
+            AND se.status = 'active'
+            AND s.status = 'active'
+            AND se.promotion_decision = 'pending'
+        `,
+        [membership.school_id, previousSessionId]
+      );
+
+      const pendingCount = pendingResult.rows[0]?.count ?? 0;
+
+      if (pendingCount > 0) {
+        await client.query("ROLLBACK");
+
+        return NextResponse.json(
+          {
+            success: false,
+            message: `There are ${pendingCount} student promotion decisions still pending. Resolve them before making this session current.`,
+            pendingCount,
+          },
+          { status: 409 }
+        );
+      }
+    }
+    if (isCurrent && previousSessionId) {
+      const pendingResult = await client.query(
+        `
+          SELECT COUNT(*)::int AS count
+          FROM student_enrollments se
+          JOIN students s
+            ON s.id = se.student_id
+           AND s.school_id = se.school_id
+          WHERE se.school_id = $1
+            AND se.academic_session_id = $2
+            AND se.status = 'active'
+            AND s.status = 'active'
+            AND se.promotion_decision = 'pending'
+        `,
+        [membership.school_id, previousSessionId]
+      );
+
+      const pendingCount = pendingResult.rows[0]?.count ?? 0;
+
+      if (pendingCount > 0) {
+        await client.query("ROLLBACK");
+
+        return NextResponse.json(
+          {
+            success: false,
+            message: `There are ${pendingCount} student promotion decisions still pending. Resolve them before making this session current.`,
+            pendingCount,
+          },
+          { status: 409 }
+        );
+      }
+    }
     if (isCurrent) {
       await client.query(
         `UPDATE academic_sessions
@@ -256,7 +352,14 @@ export async function PUT(request: NextRequest) {
         [membership.school_id]
       );
     }
-
+          if (isCurrent && previousSessionId) {
+      await processStudentPromotions(
+        client,
+        membership.school_id,
+        previousSessionId,
+        id
+      );
+    }
     await client.query(
       `UPDATE academic_sessions
        SET

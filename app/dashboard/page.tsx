@@ -1,3 +1,4 @@
+
 import { redirect } from "next/navigation";
 import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -99,6 +100,8 @@ export default async function DashboardPage() {
     { label: "Subjects", href: "/dashboard/subjects" },
     { label: "Staff", href: "/dashboard/staff" },
     { label: "Students", href: "/dashboard/students" }, 
+    { label: "Student Promotions", href: "/dashboard/promotions" },
+{ label: "Class Progressions", href: "/dashboard/class-progressions" },
     { label: "Parents", href: "/dashboard/parents" },
     { label: "Teacher Assignments", href: "/dashboard/teacher-assignments" },
     { label: "Timetable", href: "/dashboard/timetable" },
