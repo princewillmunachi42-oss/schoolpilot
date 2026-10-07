@@ -1,6 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Bell,
+  CalendarDays,
+  CheckCircle2,
+  Megaphone,
+  Users,
+} from "lucide-react";
 
 type Announcement = {
   id: string;
@@ -15,7 +25,9 @@ type Announcement = {
 };
 
 export default function TeacherAnnouncementsPage() {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -74,85 +86,167 @@ export default function TeacherAnnouncementsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
-        <a
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        <Link
           href="/teacher"
-          className="mb-6 inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground"
+          className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
-          ← Back to Teacher Dashboard
-        </a>
+          <ArrowLeft className="h-4 w-4" />
+          Back to Teacher Dashboard
+        </Link>
 
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight">
-            Announcements
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            School announcements and messages for teachers.
-          </p>
-        </div>
+        <header className="mb-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                <Megaphone className="h-3.5 w-3.5" />
+                School communication
+              </div>
+
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                Announcements
+              </h1>
+
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                Stay up to date with school announcements and
+                important messages for teachers.
+              </p>
+            </div>
+
+            {!loading && !error && (
+              <div className="rounded-2xl border border-border bg-card px-4 py-3 shadow-sm">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Published
+                </p>
+
+                <p className="mt-1 text-2xl font-bold">
+                  {announcements.length}
+                </p>
+              </div>
+            )}
+          </div>
+        </header>
 
         {loading && (
-          <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">
-            Loading announcements...
-          </div>
+          <section className="space-y-4">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-44 animate-pulse rounded-2xl bg-muted"
+              />
+            ))}
+          </section>
         )}
 
         {!loading && error && (
-          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6">
-            <p className="text-sm font-medium text-destructive">
-              {error}
-            </p>
-          </div>
+          <section
+            className="rounded-2xl border border-destructive/20 bg-destructive/10 p-6"
+            role="alert"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+
+              <div>
+                <h2 className="font-semibold text-destructive">
+                  Unable to load announcements
+                </h2>
+
+                <p className="mt-1 text-sm leading-6 text-destructive/80">
+                  {error}
+                </p>
+              </div>
+            </div>
+          </section>
         )}
 
         {!loading && !error && announcements.length === 0 && (
-          <div className="rounded-xl border bg-card p-8 text-center">
-            <h2 className="text-base font-semibold">
+          <section className="rounded-2xl border border-border bg-card p-10 text-center shadow-sm">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+              <Bell className="h-7 w-7" />
+            </div>
+
+            <h2 className="mt-4 text-lg font-semibold">
               No announcements yet
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Published school or teacher announcements will appear here.
+
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+              Published school or teacher announcements will
+              appear here when they are available.
             </p>
-          </div>
+
+            <Link
+              href="/teacher"
+              className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary-hover"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Return to Dashboard
+            </Link>
+          </section>
         )}
 
         {!loading && !error && announcements.length > 0 && (
-          <div className="space-y-4">
+          <section className="space-y-4">
             {announcements.map((announcement) => (
               <article
                 key={announcement.id}
-                className="rounded-xl border bg-card p-5 shadow-sm"
+                className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
               >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <h2 className="text-lg font-semibold">
-                      {announcement.title}
-                    </h2>
+                <div className="p-5 sm:p-6">
+                  <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <Megaphone className="h-5 w-5" />
+                      </div>
 
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Published{" "}
-                      {formatDate(
-                        announcement.published_at ||
-                          announcement.created_at
-                      )}{" "}
-                      · By {creatorName(announcement)}
-                    </p>
+                      <div className="min-w-0">
+                        <h2 className="text-lg font-semibold leading-7">
+                          {announcement.title}
+                        </h2>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+                          <span className="inline-flex items-center gap-1.5">
+                            <CalendarDays className="h-3.5 w-3.5" />
+                            Published{" "}
+                            {formatDate(
+                              announcement.published_at ||
+                                announcement.created_at
+                            )}
+                          </span>
+
+                          <span className="inline-flex items-center gap-1.5">
+                            <Users className="h-3.5 w-3.5" />
+                            By {creatorName(announcement)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <span
+                      className={`inline-flex w-fit shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                        announcement.audience === "teachers"
+                          ? "border-primary/20 bg-primary/10 text-primary"
+                          : "border-success/20 bg-success/10 text-success"
+                      }`}
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      {announcement.audience === "teachers"
+                        ? "Teachers"
+                        : "Everyone"}
+                    </span>
                   </div>
 
-                  <span className="w-fit rounded-full bg-muted px-3 py-1 text-xs font-medium">
-                    {announcement.audience === "teachers"
-                      ? "Teachers"
-                      : "Everyone"}
-                  </span>
-                </div>
-
-                <div className="mt-4 whitespace-pre-wrap text-sm leading-6 text-foreground">
-                  {announcement.content}
+                  <div className="mt-5 border-t border-border pt-5">
+                    <p className="whitespace-pre-wrap text-sm leading-7 text-foreground/90">
+                      {announcement.content}
+                    </p>
+                  </div>
                 </div>
               </article>
             ))}
-          </div>
+          </section>
         )}
       </div>
     </main>

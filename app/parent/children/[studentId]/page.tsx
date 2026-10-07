@@ -3,6 +3,18 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import {
+  ArrowLeft,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardCheck,
+  GraduationCap,
+  Hash,
+  UserRound,
+  Users,
+  VenusAndMars,
+  ChevronRight,
+} from "lucide-react";
 
 type Child = {
   id: string;
@@ -56,11 +68,22 @@ export default function ParentChildPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen p-4 sm:p-6">
-        <div className="mx-auto max-w-4xl">
-          <p className="text-sm text-gray-500">
-            Loading child information...
-          </p>
+      <main className="min-h-screen bg-background px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+        <div className="mx-auto max-w-5xl space-y-6">
+          <div className="h-6 w-44 animate-pulse rounded-lg bg-muted" />
+
+          <div className="h-56 animate-pulse rounded-3xl border bg-card" />
+
+          <div className="h-72 animate-pulse rounded-3xl border bg-card" />
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            {[1, 2, 3].map((item) => (
+              <div
+                key={item}
+                className="h-36 animate-pulse rounded-2xl border bg-card"
+              />
+            ))}
+          </div>
         </div>
       </main>
     );
@@ -68,16 +91,17 @@ export default function ParentChildPage() {
 
   if (error || !child) {
     return (
-      <main className="min-h-screen p-4 sm:p-6">
-        <div className="mx-auto max-w-4xl space-y-4">
+      <main className="min-h-screen bg-background px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+        <div className="mx-auto max-w-5xl space-y-5">
           <Link
             href="/parent"
-            className="inline-flex text-sm font-medium text-blue-600 hover:underline"
+            className="inline-flex items-center gap-2 rounded-xl border bg-card px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
           >
-            ← Back to Parent Dashboard
+            <ArrowLeft className="h-4 w-4" />
+            Back to Parent Dashboard
           </Link>
 
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <div className="rounded-3xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
             {error || "Child information could not be found."}
           </div>
         </div>
@@ -93,89 +117,194 @@ export default function ParentChildPage() {
     .filter(Boolean)
     .join(" ");
 
+  const initials =
+    `${child.first_name.charAt(0)}${child.last_name.charAt(0)}`.toUpperCase();
+
   const formattedDateOfBirth = child.date_of_birth
     ? child.date_of_birth.slice(0, 10)
     : "—";
 
+  const quickActions = [
+    {
+      title: "Attendance",
+      description: "View attendance records.",
+      href: `/parent/attendance?student=${child.id}`,
+      icon: ClipboardCheck,
+      iconStyle:
+        "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400",
+    },
+    {
+      title: "Results",
+      description: "View academic results.",
+      href: `/parent/results?student=${child.id}`,
+      icon: GraduationCap,
+      iconStyle:
+        "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400",
+    },
+    {
+      title: "Timetable",
+      description: "View class timetable.",
+      href: `/parent/timetable?student=${child.id}`,
+      icon: CalendarDays,
+      iconStyle:
+        "bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-400",
+    },
+  ];
+
   return (
-    <main className="min-h-screen p-4 sm:p-6">
-      <div className="mx-auto max-w-4xl space-y-6">
+    <main className="min-h-screen bg-background px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+      <div className="mx-auto max-w-5xl space-y-6">
+        {/* Back */}
         <Link
           href="/parent"
-          className="inline-flex text-sm font-medium text-blue-600 hover:underline"
+          className="inline-flex items-center gap-2 rounded-xl border bg-card px-3.5 py-2.5 text-sm font-semibold text-muted-foreground transition hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
         >
-          ← Back to Parent Dashboard
+          <ArrowLeft className="h-4 w-4" />
+          Back to Parent Dashboard
         </Link>
 
-        <header className="rounded-2xl border bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 text-lg font-bold text-gray-700">
-              {child.first_name.charAt(0)}
-              {child.last_name.charAt(0)}
-            </div>
+        {/* Student Hero */}
+        <header className="relative overflow-hidden rounded-3xl border bg-card">
+          <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-primary/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-20 -left-16 h-48 w-48 rounded-full bg-accent/10 blur-3xl" />
 
-            <div>
-              <p className="text-sm text-gray-500">My Child</p>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {fullName}
-              </h1>
+          <div className="relative p-5 sm:p-7 lg:p-8">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl bg-primary/10 text-xl font-bold text-primary ring-8 ring-primary/5 sm:h-24 sm:w-24 sm:text-2xl">
+                {initials}
+              </div>
 
-              {child.class_name && (
-                <p className="mt-1 text-sm text-gray-500">
-                  {child.class_name}
-                  {child.class_level
-                    ? ` • ${child.class_level}`
-                    : ""}
-                </p>
-              )}
+              <div className="min-w-0">
+                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+                  <GraduationCap className="h-3.5 w-3.5" />
+                  My Child
+                </div>
+
+                <h1 className="break-words text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
+                  {fullName}
+                </h1>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  {child.class_name && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <GraduationCap className="h-4 w-4" />
+                      {child.class_name}
+                    </span>
+                  )}
+
+                  {child.class_level && (
+                    <>
+                      <span className="text-border">•</span>
+                      <span>{child.class_level}</span>
+                    </>
+                  )}
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {child.is_primary_contact ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1.5 text-xs font-semibold text-success">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Primary Contact
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground">
+                      <Users className="h-3.5 w-3.5" />
+                      Linked Contact
+                    </span>
+                  )}
+
+                  {child.relationship && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border bg-background px-3 py-1.5 text-xs font-semibold capitalize">
+                      <UserRound className="h-3.5 w-3.5 text-primary" />
+                      {child.relationship}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </header>
 
-        <section className="rounded-2xl border bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Student Information
-          </h2>
+        {/* Student Information */}
+        <section className="rounded-3xl border bg-card">
+          <div className="border-b px-5 py-5 sm:px-7">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <UserRound className="h-5 w-5" />
+              </div>
 
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-sm text-gray-500">Admission Number</p>
-              <p className="mt-1 font-medium text-gray-900">
+              <div>
+                <h2 className="font-bold">Student Information</h2>
+                <p className="text-sm text-muted-foreground">
+                  Basic information about {child.first_name}.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-3">
+            <div className="bg-card p-5">
+              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <Hash className="h-4 w-4" />
+                Admission Number
+              </div>
+
+              <p className="mt-2 break-words font-semibold">
                 {child.admission_number || "—"}
               </p>
             </div>
 
-            <div>
-              <p className="text-sm text-gray-500">Class</p>
-              <p className="mt-1 font-medium text-gray-900">
+            <div className="bg-card p-5">
+              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <GraduationCap className="h-4 w-4" />
+                Class
+              </div>
+
+              <p className="mt-2 break-words font-semibold">
                 {child.class_name || "—"}
               </p>
             </div>
 
-            <div>
-              <p className="text-sm text-gray-500">Gender</p>
-              <p className="mt-1 font-medium capitalize text-gray-900">
+            <div className="bg-card p-5">
+              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <VenusAndMars className="h-4 w-4" />
+                Gender
+              </div>
+
+              <p className="mt-2 font-semibold capitalize">
                 {child.gender || "—"}
               </p>
             </div>
 
-            <div>
-              <p className="text-sm text-gray-500">Date of Birth</p>
-              <p className="mt-1 font-medium text-gray-900">
+            <div className="bg-card p-5">
+              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <CalendarDays className="h-4 w-4" />
+                Date of Birth
+              </div>
+
+              <p className="mt-2 font-semibold">
                 {formattedDateOfBirth}
               </p>
             </div>
 
-            <div>
-              <p className="text-sm text-gray-500">Relationship</p>
-              <p className="mt-1 font-medium capitalize text-gray-900">
+            <div className="bg-card p-5">
+              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <Users className="h-4 w-4" />
+                Relationship
+              </div>
+
+              <p className="mt-2 font-semibold capitalize">
                 {child.relationship || "—"}
               </p>
             </div>
 
-            <div>
-              <p className="text-sm text-gray-500">Contact Status</p>
-              <p className="mt-1 font-medium text-gray-900">
+            <div className="bg-card p-5">
+              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4" />
+                Contact Status
+              </div>
+
+              <p className="mt-2 font-semibold">
                 {child.is_primary_contact
                   ? "Primary Contact"
                   : "Linked Contact"}
@@ -184,36 +313,51 @@ export default function ParentChildPage() {
           </div>
         </section>
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Link
-            href={`/parent/attendance?student=${child.id}`}
-            className="rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md"
-          >
-            <h2 className="font-semibold text-gray-900">Attendance</h2>
-            <p className="mt-1 text-sm text-gray-500">
-              View attendance records.
-            </p>
-          </Link>
+        {/* Quick Actions */}
+        <section>
+          <div className="mb-4">
+            <h2 className="text-xl font-bold tracking-tight">
+              Academic Overview
+            </h2>
 
-          <Link
-            href={`/parent/results?student=${child.id}`}
-            className="rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md"
-          >
-            <h2 className="font-semibold text-gray-900">Results</h2>
-            <p className="mt-1 text-sm text-gray-500">
-              View academic results.
+            <p className="mt-1 text-sm text-muted-foreground">
+              Quickly access important information for {child.first_name}.
             </p>
-          </Link>
+          </div>
 
-          <Link
-            href={`/parent/timetable?student=${child.id}`}
-            className="rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md"
-          >
-            <h2 className="font-semibold text-gray-900">Timetable</h2>
-            <p className="mt-1 text-sm text-gray-500">
-              View class timetable.
-            </p>
-          </Link>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {quickActions.map((action) => {
+              const Icon = action.icon;
+
+              return (
+                <Link
+                  key={action.title}
+                  href={action.href}
+                  className="group rounded-2xl border bg-card p-5 transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div
+                      className={`flex h-11 w-11 items-center justify-center rounded-xl ${action.iconStyle}`}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </div>
+
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition group-hover:bg-primary/10 group-hover:text-primary">
+                      <ChevronRight className="h-5 w-5" />
+                    </div>
+                  </div>
+
+                  <h3 className="mt-4 font-semibold">
+                    {action.title}
+                  </h3>
+
+                  <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
+                    {action.description}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
         </section>
       </div>
     </main>

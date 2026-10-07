@@ -1,5 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import {
+  AlertCircle,
+  ArrowLeft,
+  CalendarDays,
+  CheckCircle2,
+  CircleDollarSign,
+  Clock3,
+  GraduationCap,
+  Receipt,
+} from "lucide-react";
 import { getCurrentStudent } from "@/lib/auth/student";
 import pool from "@/lib/db";
 
@@ -47,6 +57,19 @@ function getStatusClass(status: string) {
       return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400";
     default:
       return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
+  }
+}
+
+function getStatusIcon(status: string) {
+  switch (status) {
+    case "paid":
+      return CheckCircle2;
+    case "overdue":
+      return AlertCircle;
+    case "partial":
+      return Clock3;
+    default:
+      return Receipt;
   }
 }
 
@@ -122,146 +145,271 @@ export default async function StudentFeesPage() {
     0
   );
 
+  const overdueCount = fees.filter(
+    (fee) => fee.status === "overdue"
+  ).length;
+
+  const paidCount = fees.filter(
+    (fee) => fee.status === "paid"
+  ).length;
+
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-6 text-gray-900 dark:bg-gray-950 dark:text-gray-100 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-6">
-          <Link
-            href="/student"
-            className="mb-4 inline-flex items-center text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
-          >
-            ← Back to Student Dashboard
-          </Link>
+    <main className="min-h-screen bg-background">
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        <Link
+          href="/student"
+          className="mb-7 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Student Dashboard
+        </Link>
 
-          <h1 className="text-2xl font-bold sm:text-3xl">
-            Fees
-          </h1>
-
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            View your school fees, payments, balances, and due dates.
-          </p>
-        </div>
-
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Total Due
-            </p>
-            <p className="mt-2 text-2xl font-bold">
-              {formatCurrency(totalDue)}
-            </p>
+        {/* Header */}
+        <header className="mb-8">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+            <CircleDollarSign className="h-3.5 w-3.5" />
+            Student Portal
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Total Paid
-            </p>
-            <p className="mt-2 text-2xl font-bold text-green-600 dark:text-green-400">
-              {formatCurrency(totalPaid)}
-            </p>
-          </div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                Fees
+              </h1>
 
-          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:col-span-2 lg:col-span-1">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Outstanding
-            </p>
-            <p className="mt-2 text-2xl font-bold text-red-600 dark:text-red-400">
-              {formatCurrency(totalOutstanding)}
-            </p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+                View your school fees, payments, outstanding balances, and due
+                dates.
+              </p>
+            </div>
+
+            <div className="flex w-fit items-center gap-3 rounded-2xl border bg-card px-4 py-3 shadow-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                <GraduationCap className="h-5 w-5 text-primary" />
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">
+                  Fee Records
+                </p>
+                <p className="text-sm font-bold">
+                  {fees.length} {fees.length === 1 ? "Record" : "Records"}
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
+        </header>
+
+        {/* Summary */}
+        <section className="mb-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard
+            icon={Receipt}
+            label="Total Due"
+            value={formatCurrency(totalDue)}
+            description="Total billed amount"
+          />
+
+          <StatCard
+            icon={CheckCircle2}
+            label="Total Paid"
+            value={formatCurrency(totalPaid)}
+            description={`${paidCount} fully paid ${
+              paidCount === 1 ? "record" : "records"
+            }`}
+          />
+
+          <StatCard
+            icon={AlertCircle}
+            label="Outstanding"
+            value={formatCurrency(totalOutstanding)}
+            description={
+              overdueCount > 0
+                ? `${overdueCount} overdue ${
+                    overdueCount === 1 ? "record" : "records"
+                  }`
+                : "No overdue records"
+            }
+          />
+        </section>
 
         {fees.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center dark:border-gray-700 dark:bg-gray-900">
-            <h2 className="text-lg font-semibold">
+          <section className="rounded-3xl border border-dashed bg-card p-10 text-center shadow-sm sm:p-14">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+              <Receipt className="h-7 w-7 text-muted-foreground" />
+            </div>
+
+            <h2 className="mt-5 text-xl font-bold">
               No fee records available
             </h2>
 
-            <p className="mx-auto mt-2 max-w-md text-sm text-gray-500 dark:text-gray-400">
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
               Your school has not added any fee records for your student
               account yet.
             </p>
-          </div>
+
+            <Link
+              href="/student"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl border bg-background px-4 py-2.5 text-sm font-semibold transition hover:bg-muted"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Return to Dashboard
+            </Link>
+          </section>
         ) : (
-          <div className="space-y-4">
-            {fees.map((fee) => (
-              <div
-                key={fee.id}
-                className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
-              >
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <h2 className="text-lg font-semibold">
-                      {fee.fee_name}
-                    </h2>
+          <section>
+            <div className="mb-4">
+              <h2 className="text-lg font-bold">Fee Records</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Your current and previous school fee records.
+              </p>
+            </div>
 
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      {fee.term_name} • {fee.session_name}
-                    </p>
-                  </div>
+            <div className="space-y-4">
+              {fees.map((fee) => {
+                const StatusIcon = getStatusIcon(fee.status);
 
-                  <span
-                    className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold ${getStatusClass(
-                      fee.status
-                    )}`}
+                return (
+                  <article
+                    key={fee.id}
+                    className="rounded-3xl border bg-card p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-6"
                   >
-                    {getStatusLabel(fee.status)}
-                  </span>
-                </div>
+                    <div className="flex flex-col gap-5">
+                      {/* Fee heading */}
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex min-w-0 gap-3">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                            <Receipt className="h-5 w-5 text-primary" />
+                          </div>
 
-                <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Amount Due
-                    </p>
-                    <p className="mt-1 font-semibold">
-                      {formatCurrency(fee.amountDue)}
-                    </p>
-                  </div>
+                          <div className="min-w-0">
+                            <h3 className="text-lg font-bold tracking-tight">
+                              {fee.fee_name}
+                            </h3>
 
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Amount Paid
-                    </p>
-                    <p className="mt-1 font-semibold text-green-600 dark:text-green-400">
-                      {formatCurrency(fee.amountPaid)}
-                    </p>
-                  </div>
+                            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                              <span>{fee.term_name}</span>
+                              <span aria-hidden="true">•</span>
+                              <span>{fee.session_name}</span>
+                            </div>
+                          </div>
+                        </div>
 
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Balance
-                    </p>
-                    <p className="mt-1 font-semibold text-red-600 dark:text-red-400">
-                      {formatCurrency(fee.balance)}
-                    </p>
-                  </div>
+                        <span
+                          className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${getStatusClass(
+                            fee.status
+                          )}`}
+                        >
+                          <StatusIcon className="h-3.5 w-3.5" />
+                          {getStatusLabel(fee.status)}
+                        </span>
+                      </div>
 
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Due Date
-                    </p>
-                    <p className="mt-1 font-semibold">
-                      {formatDate(fee.due_date)}
-                    </p>
-                  </div>
-                </div>
+                      {/* Amount details */}
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <FeeDetail
+                          label="Amount Due"
+                          value={formatCurrency(fee.amountDue)}
+                        />
 
-                {fee.remarks && (
-                  <div className="mt-5 border-t border-gray-100 pt-4 dark:border-gray-800">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Remarks
-                    </p>
-                    <p className="mt-1 text-sm">
-                      {fee.remarks}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+                        <FeeDetail
+                          label="Amount Paid"
+                          value={formatCurrency(fee.amountPaid)}
+                          valueClassName="text-green-600 dark:text-green-400"
+                        />
+
+                        <FeeDetail
+                          label="Balance"
+                          value={formatCurrency(fee.balance)}
+                          valueClassName={
+                            fee.balance > 0
+                              ? "text-red-600 dark:text-red-400"
+                              : "text-green-600 dark:text-green-400"
+                          }
+                        />
+
+                        <FeeDetail
+                          label="Due Date"
+                          value={formatDate(fee.due_date)}
+                          icon={<CalendarDays className="h-3.5 w-3.5" />}
+                        />
+                      </div>
+
+                      {fee.remarks && (
+                        <div className="rounded-2xl border bg-muted/40 px-4 py-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Remarks
+                          </p>
+
+                          <p className="mt-1 text-sm leading-6">
+                            {fee.remarks}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
         )}
       </div>
     </main>
+  );
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  description,
+}: {
+  icon: typeof Receipt;
+  label: string;
+  value: string;
+  description: string;
+}) {
+  return (
+    <div className="group rounded-3xl border bg-card p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+        <Icon className="h-5 w-5" />
+      </div>
+
+      <p className="mt-4 text-sm font-medium text-muted-foreground">
+        {label}
+      </p>
+
+      <p className="mt-1 break-words text-2xl font-bold tracking-tight">
+        {value}
+      </p>
+
+      <p className="mt-1 text-xs text-muted-foreground">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+function FeeDetail({
+  label,
+  value,
+  valueClassName = "",
+  icon,
+}: {
+  label: string;
+  value: string;
+  valueClassName?: string;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border bg-background px-4 py-3">
+      <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        {icon}
+        {label}
+      </p>
+
+      <p className={`mt-1 text-sm font-bold ${valueClassName}`}>
+        {value}
+      </p>
+    </div>
   );
 }

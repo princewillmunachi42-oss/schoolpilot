@@ -1,7 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import {
+  Bell,
+  BookOpen,
+  CalendarDays,
+  ChevronRight,
+  CircleDollarSign,
+  GraduationCap,
+  LogOut,
+  MessageSquare,
+  UserRound,
+  Users,
+  ClipboardCheck,
+} from "lucide-react";
 
 type Child = {
   id: string;
@@ -29,6 +42,9 @@ export default function ParentDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/parent/dashboard")
@@ -36,14 +52,20 @@ export default function ParentDashboardPage() {
         const result = await response.json();
 
         if (!response.ok || !result.success) {
-          throw new Error(result.message || "Unable to load parent dashboard.");
+          throw new Error(
+            result.message || "Unable to load parent dashboard."
+          );
         }
 
-          const notificationsResponse = await fetch("/api/parent/notifications?unread=true");
-          if (notificationsResponse.ok) {
-            const notifications = await notificationsResponse.json();
-            setUnreadCount(Number(notifications.unreadCount ?? 0));
-          }
+        const notificationsResponse = await fetch(
+          "/api/parent/notifications?unread=true"
+        );
+
+        if (notificationsResponse.ok) {
+          const notifications = await notificationsResponse.json();
+          setUnreadCount(Number(notifications.unreadCount ?? 0));
+        }
+
         setData(result);
       })
       .catch((err) => {
@@ -54,11 +76,39 @@ export default function ParentDashboardPage() {
       });
   }, []);
 
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(event.target as Node)
+      ) {
+        setProfileMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, []);
+
   if (loading) {
     return (
-      <main className="min-h-screen p-6">
-        <div className="mx-auto max-w-6xl">
-          <p className="text-sm text-gray-500">Loading parent dashboard...</p>
+      <main className="min-h-screen bg-background px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl space-y-6">
+          <div className="h-44 animate-pulse rounded-3xl border bg-card" />
+
+          <div className="h-8 w-48 animate-pulse rounded-lg bg-muted" />
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((item) => (
+              <div
+                key={item}
+                className="h-52 animate-pulse rounded-2xl border bg-card"
+              />
+            ))}
+          </div>
         </div>
       </main>
     );
@@ -66,9 +116,9 @@ export default function ParentDashboardPage() {
 
   if (error) {
     return (
-      <main className="min-h-screen p-6">
+      <main className="min-h-screen bg-background px-4 py-6 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-5 text-sm text-destructive">
             {error}
           </div>
         </div>
@@ -80,89 +130,225 @@ export default function ParentDashboardPage() {
     return null;
   }
 
+  const parentInitials = data.parent.fullName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((name) => name.charAt(0).toUpperCase())
+    .join("");
+
+  const quickLinks = [
+    {
+      title: "Attendance",
+      description: "Monitor your children's attendance records.",
+      href: "/parent/attendance",
+      icon: ClipboardCheck,
+      iconStyle:
+        "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400",
+    },
+    {
+      title: "Results",
+      description: "Review academic performance and results.",
+      href: "/parent/results",
+      icon: BookOpen,
+      iconStyle:
+        "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400",
+    },
+    {
+      title: "Fees",
+      description: "View fee records and payment information.",
+      href: "/parent/fees",
+      icon: CircleDollarSign,
+      iconStyle:
+        "bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400",
+    },
+    {
+      title: "Timetable",
+      description: "View your children's weekly timetables.",
+      href: "/parent/timetable",
+      icon: CalendarDays,
+      iconStyle:
+        "bg-cyan-50 text-cyan-600 dark:bg-cyan-500/10 dark:text-cyan-400",
+    },
+    {
+      title: "Communications",
+      description: "View school messages and updates.",
+      href: "/parent/communications",
+      icon: MessageSquare,
+      iconStyle:
+        "bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400",
+    },
+    {
+      title: "My Profile",
+      description: "View your parent account information.",
+      href: "/parent/profile",
+      icon: UserRound,
+      iconStyle:
+        "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+    },
+  ];
+
   return (
-    <main className="min-h-screen p-4 sm:p-6">
+    <main className="min-h-screen bg-background px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
       <div className="mx-auto max-w-6xl space-y-6">
-        <header className="rounded-2xl border bg-white p-5 shadow-sm">
-  <div className="flex items-start justify-between gap-4">
-    <div>
-      <p className="text-sm text-gray-500">Parent Portal</p>
-      <h1 className="mt-1 text-2xl font-bold text-gray-900">
-        Welcome, {data.parent.fullName}
-      </h1>
-      <p className="mt-2 text-sm text-gray-500">
-        View and manage information connected to your children.
-      </p>
-    </div>
+        {/* Responsive Header */}
+        <header className="relative overflow-visible rounded-3xl border bg-card">
+          <div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
 
-      <div className="flex shrink-0 items-center gap-2">
-        <Link
-          href="/parent/notifications"
-          aria-label="Notifications"
-          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl hover:bg-gray-100"
-        >
-          <span className="text-lg">🔔</span>
-          {unreadCount > 0 && (
-            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </span>
-          )}
-        </Link>
+          <div className="relative p-4 sm:p-6 lg:p-7">
+            {/* Top section */}
+            <div className="flex flex-col gap-5">
+              <div className="min-w-0">
+                <div className="mb-3 inline-flex max-w-full items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+                  <Users className="h-3.5 w-3.5 shrink-0" />
+                  <span>Parent Portal</span>
+                </div>
 
-        <details className="relative shrink-0">
-          <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-gray-100">
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-semibold text-gray-900">
-                {data.parent.fullName}
-              </p>
-              <p className="text-xs text-gray-500">Parent</p>
+                <h1 className="break-words text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">
+                  Welcome, {data.parent.fullName}
+                </h1>
+
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+                  Stay connected with your children's academic progress,
+                  attendance, fees, timetable, and school communications.
+                </p>
+              </div>
+
+              {/* Controls */}
+              <div className="flex w-full items-center justify-between gap-3 border-t pt-4 sm:justify-end sm:border-t-0 sm:pt-0">
+                <div className="min-w-0 sm:hidden">
+                  <p className="truncate text-sm font-semibold">
+                    {data.parent.fullName}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Parent account
+                  </p>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-2">
+                  {/* Notifications */}
+                  <Link
+                    href="/parent/notifications"
+                    aria-label="Notifications"
+                    className="relative flex h-11 w-11 items-center justify-center rounded-xl border bg-background text-muted-foreground transition hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+                  >
+                    <Bell className="h-5 w-5" />
+
+                    {unreadCount > 0 && (
+                      <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-white">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
+                  </Link>
+
+                  {/* Profile */}
+                  <div ref={profileMenuRef} className="relative">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setProfileMenuOpen((open) => !open)
+                      }
+                      aria-expanded={profileMenuOpen}
+                      aria-haspopup="menu"
+                      className="flex h-11 items-center gap-2 rounded-xl border bg-background px-1.5 pr-2 transition hover:border-primary/30 hover:bg-primary/5 sm:gap-3 sm:px-2"
+                    >
+                      <div className="hidden text-right md:block">
+                        <p className="max-w-40 truncate text-sm font-semibold">
+                          {data.parent.fullName}
+                        </p>
+
+                        <p className="text-xs text-muted-foreground">
+                          Parent
+                        </p>
+                      </div>
+
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary sm:h-10 sm:w-10 sm:text-sm">
+                        {parentInitials}
+                      </div>
+                    </button>
+
+                    {profileMenuOpen && (
+                      <div
+                        role="menu"
+                        className="absolute right-0 z-50 mt-2 w-[calc(100vw-2rem)] max-w-64 rounded-2xl border bg-card p-2 shadow-xl sm:w-56"
+                      >
+                        <div className="mb-2 border-b px-3 py-2.5">
+                          <p className="truncate text-sm font-semibold">
+                            {data.parent.fullName}
+                          </p>
+
+                          {data.parent.email && (
+                            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                              {data.parent.email}
+                            </p>
+                          )}
+                        </div>
+
+                        <Link
+                          href="/parent/profile"
+                          onClick={() => setProfileMenuOpen(false)}
+                          className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition hover:bg-muted"
+                        >
+                          <UserRound className="h-4 w-4" />
+                          My Profile
+                        </Link>
+
+                        <form
+                          action="/api/auth/logout"
+                          method="POST"
+                        >
+                          <button
+                            type="submit"
+                            className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-destructive transition hover:bg-destructive/10"
+                          >
+                            <LogOut className="h-4 w-4" />
+                            Logout
+                          </button>
+                        </form>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-bold text-gray-700">
-              {data.parent.fullName
-                .split(" ")
-                .filter(Boolean)
-                .slice(0, 2)
-                .map((name) => name.charAt(0).toUpperCase())
-                .join("")}
-            </div>
-          </summary>
-
-          <div className="absolute right-0 z-20 mt-2 w-44 rounded-xl border bg-white p-2 shadow-lg">
-            <form action="/api/auth/logout" method="POST">
-              <button
-                type="submit"
-                className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50"
-              >
-                Logout
-              </button>
-            </form>
           </div>
-        </details>
-      </div>
-    </div>
-  </header>
-          
+        </header>
+
+        {/* Children */}
         <section>
-          <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-xl font-bold tracking-tight">
                 My Children
               </h2>
-              <p className="text-sm text-gray-500">
+
+              <p className="mt-1 text-sm text-muted-foreground">
                 Children currently linked to your parent account.
               </p>
             </div>
 
-            <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
+            <div className="flex w-fit items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-sm font-medium">
+              <Users className="h-4 w-4 text-primary" />
+
               {data.children.length}{" "}
               {data.children.length === 1 ? "child" : "children"}
-            </span>
+            </div>
           </div>
 
           {data.children.length === 0 ? (
-            <div className="rounded-2xl border bg-white p-6 text-sm text-gray-500 shadow-sm">
-              No active children are currently linked to your account.
+            <div className="rounded-3xl border bg-card p-8 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+                <GraduationCap className="h-7 w-7" />
+              </div>
+
+              <h3 className="mt-4 font-semibold">
+                No children linked
+              </h3>
+
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+                No active children are currently linked to your parent
+                account.
+              </p>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -175,50 +361,60 @@ export default function ParentDashboardPage() {
                   .filter(Boolean)
                   .join(" ");
 
+                const initials =
+                  `${child.first_name.charAt(
+                    0
+                  )}${child.last_name.charAt(0)}`.toUpperCase();
+
                 return (
                   <article
                     key={child.id}
-                    className="rounded-2xl border bg-white p-5 shadow-sm"
+                    className="group rounded-3xl border bg-card p-5 transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {fullName}
-                        </h3>
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-sm font-bold text-primary">
+                          {initials}
+                        </div>
 
-                        {child.class_name && (
-                          <p className="mt-1 text-sm text-gray-500">
-                            {child.class_name}
+                        <div className="min-w-0">
+                          <h3 className="truncate font-bold">
+                            {fullName}
+                          </h3>
+
+                          <p className="mt-0.5 truncate text-sm text-muted-foreground">
+                            {child.class_name || "Class not assigned"}
                           </p>
-                        )}
+                        </div>
                       </div>
 
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-100 text-sm font-bold text-gray-700">
-                        {child.first_name.charAt(0)}
-                        {child.last_name.charAt(0)}
-                      </div>
+                      <GraduationCap className="h-5 w-5 shrink-0 text-primary/60" />
                     </div>
 
-                    <div className="mt-5 space-y-2 text-sm">
-                      <div className="flex justify-between gap-3">
-                        <span className="text-gray-500">
+                    <div className="mt-5 space-y-3 rounded-2xl bg-muted/50 p-4">
+                      <div className="flex items-center justify-between gap-3 text-sm">
+                        <span className="text-muted-foreground">
                           Admission Number
                         </span>
-                        <span className="font-medium text-gray-900">
+
+                        <span className="text-right font-semibold">
                           {child.admission_number || "—"}
                         </span>
                       </div>
 
-                      <div className="flex justify-between gap-3">
-                        <span className="text-gray-500">Relationship</span>
-                        <span className="font-medium capitalize text-gray-900">
+                      <div className="flex items-center justify-between gap-3 text-sm">
+                        <span className="text-muted-foreground">
+                          Relationship
+                        </span>
+
+                        <span className="font-semibold capitalize">
                           {child.relationship || "—"}
                         </span>
                       </div>
 
                       {child.is_primary_contact && (
-                        <div className="pt-2">
-                          <span className="rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700">
+                        <div className="pt-1">
+                          <span className="inline-flex items-center rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">
                             Primary Contact
                           </span>
                         </div>
@@ -228,9 +424,10 @@ export default function ParentDashboardPage() {
                     <div className="mt-5 border-t pt-4">
                       <Link
                         href={`/parent/children/${child.id}`}
-                        className="text-sm font-medium text-blue-600 hover:underline"
+                        className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
                       >
                         View Child
+                        <ChevronRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
                       </Link>
                     </div>
                   </article>
@@ -240,70 +437,51 @@ export default function ParentDashboardPage() {
           )}
         </section>
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Link
-            href="/parent/attendance"
-            className="rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md"
-          >
-            <h3 className="font-semibold text-gray-900">Attendance</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              View your children&apos;s attendance.
+        {/* Quick Access */}
+        <section>
+          <div className="mb-4">
+            <h2 className="text-xl font-bold tracking-tight">
+              Quick Access
+            </h2>
+
+            <p className="mt-1 text-sm text-muted-foreground">
+              Access the most important areas of your parent portal.
             </p>
-          </Link>
+          </div>
 
-          <Link
-            href="/parent/results"
-            className="rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md"
-          >
-            <h3 className="font-semibold text-gray-900">Results</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              View academic results.
-            </p>
-          </Link>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {quickLinks.map((item) => {
+              const Icon = item.icon;
 
-          <Link
-            href="/parent/fees"
-            className="rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md"
-          >
-            <h3 className="font-semibold text-gray-900">Fees</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              View fee information.
+              return (
+                <Link
+                  key={item.title}
+                  href={item.href}
+                  className="group rounded-2xl border bg-card p-5 transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div
+                      className={`flex h-11 w-11 items-center justify-center rounded-xl ${item.iconStyle}`}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </div>
 
-              </p>
-            </Link>
-           <Link
-            href="/parent/profile"
-            className="rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md"
-          >
-            <h3 className="font-semibold text-gray-900">My Profile</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              View your parent profile.
-            </p>
-          </Link>
-         <Link
-  href="/parent/timetable"
-  className="rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md"
->
-  <h3 className="font-semibold text-gray-900">
-    Timetable
-  </h3>
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition group-hover:bg-primary/10 group-hover:text-primary">
+                      <ChevronRight className="h-5 w-5" />
+                    </div>
+                  </div>
 
-  <p className="mt-1 text-sm text-gray-500">
-    View your child&apos;s weekly class timetable.
-  </p>
-</Link>
-<Link
-  href="/parent/communications"
-  className="rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md"
->
-  <h3 className="font-semibold text-gray-900">
-    Communications
-  </h3>
+                  <h3 className="mt-4 font-semibold">
+                    {item.title}
+                  </h3>
 
-  <p className="mt-1 text-sm text-gray-500">
-    View messages, announcements, and assignments from the school.
-  </p>
-</Link>
+                  <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
+                    {item.description}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
         </section>
       </div>
     </main>

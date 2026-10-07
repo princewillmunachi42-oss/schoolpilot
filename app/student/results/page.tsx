@@ -1,5 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import {
+  ArrowLeft,
+  Award,
+  BarChart3,
+  BookOpen,
+  GraduationCap,
+  Trophy,
+} from "lucide-react";
 import { getCurrentStudent } from "@/lib/auth/student";
 import pool from "@/lib/db";
 import ResultsFilters from "./ResultsFilters";
@@ -71,83 +79,173 @@ export default async function StudentResultsPage() {
 
   const highestScore =
     totalSubjects > 0
-      ? Math.max(
-          ...results.map((item) => Number(item.total_score))
-        )
+      ? Math.max(...results.map((item) => Number(item.total_score)))
       : 0;
 
   return (
-    <main className="min-h-screen bg-background px-4 py-8">
-      <div className="mx-auto max-w-6xl">
+    <main className="min-h-screen bg-background">
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <Link
           href="/student"
-          className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          className="mb-7 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-foreground"
         >
-          ← Back to Student Dashboard
+          <ArrowLeft className="h-4 w-4" />
+          Back to Student Dashboard
         </Link>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Results
-          </h1>
-
-          <p className="mt-2 text-sm text-muted-foreground">
-            View your academic results by subject, session, and term.
-          </p>
-        </div>
-
-        <section className="mb-6 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-border bg-card p-5">
-            <p className="text-sm text-muted-foreground">
-              Subjects
-            </p>
-
-            <p className="mt-2 text-3xl font-bold">
-              {totalSubjects}
-            </p>
+        {/* Header */}
+        <header className="mb-8">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+            <GraduationCap className="h-3.5 w-3.5" />
+            Academic Performance
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-5">
-            <p className="text-sm text-muted-foreground">
-              Average Score
-            </p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                Results
+              </h1>
 
-            <p className="mt-2 text-3xl font-bold">
-              {averageScore.toFixed(1)}
-              <span className="ml-1 text-base font-medium text-muted-foreground">
-                /100
-              </span>
-            </p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+                Review your academic performance by subject, session, and term.
+              </p>
+            </div>
+
+            <div className="flex w-fit items-center gap-3 rounded-2xl border bg-card px-4 py-3 shadow-sm">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                <BarChart3 className="h-5 w-5 text-primary" />
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">
+                  Recorded Results
+                </p>
+                <p className="text-sm font-bold">
+                  {totalSubjects} {totalSubjects === 1 ? "Subject" : "Subjects"}
+                </p>
+              </div>
+            </div>
           </div>
+        </header>
 
-          <div className="rounded-2xl border border-border bg-card p-5">
-            <p className="text-sm text-muted-foreground">
-              Highest Score
-            </p>
+        {/* Summary */}
+        <section className="mb-7 grid gap-4 sm:grid-cols-3">
+          <StatCard
+            icon={BookOpen}
+            label="Subjects"
+            value={String(totalSubjects)}
+            description="Results recorded"
+          />
 
-            <p className="mt-2 text-3xl font-bold">
-              {highestScore.toFixed(1)}
-              <span className="ml-1 text-base font-medium text-muted-foreground">
-                /100
-              </span>
-            </p>
-          </div>
+          <StatCard
+            icon={BarChart3}
+            label="Average Score"
+            value={averageScore.toFixed(1)}
+            suffix="/100"
+            description="Across recorded subjects"
+          />
+
+          <StatCard
+            icon={Trophy}
+            label="Highest Score"
+            value={highestScore.toFixed(1)}
+            suffix="/100"
+            description="Best recorded score"
+          />
         </section>
 
         {results.length === 0 ? (
-          <section className="rounded-2xl border border-border bg-card p-8 text-center">
-            <p className="font-medium">
-              No results available yet.
+          <section className="rounded-3xl border bg-card p-10 text-center shadow-sm sm:p-14">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+              <Award className="h-7 w-7 text-muted-foreground" />
+            </div>
+
+            <h2 className="mt-5 text-xl font-bold">
+              No results available yet
+            </h2>
+
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+              Your academic results will appear here when your school publishes
+              them.
             </p>
 
-            <p className="mt-1 text-sm text-muted-foreground">
-              Your academic results will appear here when your school publishes them.
-            </p>
+            <Link
+              href="/student"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl border bg-background px-4 py-2.5 text-sm font-semibold transition hover:bg-muted"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Return to Dashboard
+            </Link>
           </section>
         ) : (
-          <ResultsFilters results={results} />
+          <section className="rounded-3xl border bg-card p-4 shadow-sm sm:p-6">
+            <div className="mb-5 flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Award className="h-5 w-5 text-primary" />
+              </div>
+
+              <div>
+                <h2 className="text-lg font-bold">
+                  Academic Results
+                </h2>
+
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Filter your results to view specific sessions, terms, or
+                  subjects.
+                </p>
+              </div>
+            </div>
+
+            <ResultsFilters results={results} />
+          </section>
         )}
       </div>
     </main>
+  );
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  suffix,
+  description,
+}: {
+  icon: typeof BookOpen;
+  label: string;
+  value: string;
+  suffix?: string;
+  description: string;
+}) {
+  return (
+    <div className="group rounded-3xl border bg-card p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+      <div className="flex items-center justify-between">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Icon className="h-5 w-5" />
+        </div>
+
+        {label === "Highest Score" && (
+          <Trophy className="h-4 w-4 text-muted-foreground transition group-hover:text-primary" />
+        )}
+      </div>
+
+      <p className="mt-4 text-sm font-medium text-muted-foreground">
+        {label}
+      </p>
+
+      <div className="mt-1 flex items-baseline gap-1">
+        <p className="text-2xl font-bold tracking-tight">{value}</p>
+
+        {suffix && (
+          <span className="text-sm font-medium text-muted-foreground">
+            {suffix}
+          </span>
+        )}
+      </div>
+
+      <p className="mt-1 text-xs text-muted-foreground">
+        {description}
+      </p>
+    </div>
   );
 }
