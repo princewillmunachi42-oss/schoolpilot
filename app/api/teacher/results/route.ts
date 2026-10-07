@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getCurrentTeacher } from "@/lib/auth/teacher";
+import { notifyParentsAboutStudentEvent } from "@/lib/notifications/parents";
+import { notifyStudentAboutResult } from "@/lib/notifications/results";
 
 const VALID_GRADES = [
   "A",
@@ -383,8 +385,55 @@ export async function POST(request: NextRequest) {
       ]
     );
 
+    const createdResult = result.rows[0];
+
+    const namesResult = await pool.query(
+      `SELECT
+         s.name AS subject_name,
+         a.name AS session_name,
+         t.name AS term_name
+       FROM subjects s
+       INNER JOIN academic_sessions a
+         ON a.id = $1
+        AND a.school_id = $2
+       INNER JOIN terms t
+         ON t.id = $3
+        AND t.school_id = $2
+       WHERE s.id = $4
+         AND s.school_id = $2
+       LIMIT 1`,
+      [
+        academicSessionId,
+        teacher.schoolId,
+        termId,
+        subjectId,
+      ]
+    );
+
+    const names = namesResult.rows[0];
+
+    if (names) {
+      await notifyStudentAboutResult({
+        schoolId: teacher.schoolId,
+        studentId,
+        resultId: createdResult.id,
+        subjectName: names.subject_name,
+        sessionName: names.session_name,
+        termName: names.term_name,
+      });
+
+      await notifyParentsAboutStudentEvent({
+        schoolId: teacher.schoolId,
+        studentId,
+        title: `New ${names.subject_name} result`,
+        message: `A new ${names.subject_name} result for ${names.term_name}, ${names.session_name} is now available for your child.`,
+        type: "result",
+        link: "/parent/results",
+      });
+    }
+
     return NextResponse.json(
-      { result: result.rows[0] },
+      { result: createdResult },
       { status: 201 }
     );
   } catch (error: unknown) {

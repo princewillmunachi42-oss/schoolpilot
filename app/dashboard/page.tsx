@@ -108,6 +108,7 @@ export default async function DashboardPage() {
 { label: "Timetable Periods", href: "/dashboard/timetable-periods" },
 { label: "Announcements", href: "/dashboard/announcements" },
 { label: "Communications", href: "/dashboard/communications" },
+{ label: "Student Fees", href: "/dashboard/fees" },
 ];
   return (
     <main className="min-h-screen bg-background text-foreground">

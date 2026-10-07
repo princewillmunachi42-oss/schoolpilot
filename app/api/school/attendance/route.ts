@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
+import { notifyParentsAboutStudentEvent } from "@/lib/notifications/parents";
 
 async function getOwnerSchool(userId: string) {
   const result = await pool.query(
@@ -165,6 +166,15 @@ export async function POST(request: NextRequest) {
         remarks || null,
       ]
     );
+
+      await notifyParentsAboutStudentEvent({
+        schoolId,
+        studentId: student_id,
+        title: `Attendance update: ${status}`,
+        message: `Your child was marked ${status.toLowerCase()} on ${new Date(attendance_date).toLocaleDateString("en-NG")}.`,
+        type: "attendance",
+        link: "/parent/attendance",
+      });
 
     return NextResponse.json(
       { attendance: result.rows[0] },

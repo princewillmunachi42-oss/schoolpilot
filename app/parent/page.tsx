@@ -28,6 +28,7 @@ export default function ParentDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     fetch("/api/parent/dashboard")
@@ -38,6 +39,11 @@ export default function ParentDashboardPage() {
           throw new Error(result.message || "Unable to load parent dashboard.");
         }
 
+          const notificationsResponse = await fetch("/api/parent/notifications?unread=true");
+          if (notificationsResponse.ok) {
+            const notifications = await notificationsResponse.json();
+            setUnreadCount(Number(notifications.unreadCount ?? 0));
+          }
         setData(result);
       })
       .catch((err) => {
@@ -89,40 +95,53 @@ export default function ParentDashboardPage() {
       </p>
     </div>
 
-    <details className="relative shrink-0">
-      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-gray-100">
-        <div className="hidden text-right sm:block">
-          <p className="text-sm font-semibold text-gray-900">
-            {data.parent.fullName}
-          </p>
-          <p className="text-xs text-gray-500">Parent</p>
-        </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <Link
+          href="/parent/notifications"
+          aria-label="Notifications"
+          className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl hover:bg-gray-100"
+        >
+          <span className="text-lg">🔔</span>
+          {unreadCount > 0 && (
+            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </Link>
 
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-bold text-gray-700">
-          {data.parent.fullName
-            .split(" ")
-            .filter(Boolean)
-            .slice(0, 2)
-            .map((name) => name.charAt(0).toUpperCase())
-            .join("")}
-        </div>
+        <details className="relative shrink-0">
+          <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-gray-100">
+            <div className="hidden text-right sm:block">
+              <p className="text-sm font-semibold text-gray-900">
+                {data.parent.fullName}
+              </p>
+              <p className="text-xs text-gray-500">Parent</p>
+            </div>
 
-       
-      </summary>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-bold text-gray-700">
+              {data.parent.fullName
+                .split(" ")
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((name) => name.charAt(0).toUpperCase())
+                .join("")}
+            </div>
+          </summary>
 
-      <div className="absolute right-0 z-20 mt-2 w-44 rounded-xl border bg-white p-2 shadow-lg">
-  <form action="/api/auth/logout" method="POST">
-    <button
-      type="submit"
-      className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50"
-    >
-      Logout
-    </button>
-  </form>
-</div>
-    </details>
-  </div>
-</header>
+          <div className="absolute right-0 z-20 mt-2 w-44 rounded-xl border bg-white p-2 shadow-lg">
+            <form action="/api/auth/logout" method="POST">
+              <button
+                type="submit"
+                className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50"
+              >
+                Logout
+              </button>
+            </form>
+          </div>
+        </details>
+      </div>
+    </div>
+  </header>
           
         <section>
           <div className="mb-4 flex items-center justify-between gap-3">
@@ -249,21 +268,9 @@ export default function ParentDashboardPage() {
             <h3 className="font-semibold text-gray-900">Fees</h3>
             <p className="mt-1 text-sm text-gray-500">
               View fee information.
-            </p>
-          </Link>
-          <Link
-  href="/parent/notifications"
-  className="rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md"
->
-  <h3 className="font-semibold text-gray-900">
-    Notifications
-  </h3>
 
-  <p className="mt-1 text-sm text-gray-500">
-    View important school notifications and messages.
-  </p>
-</Link>
-
+              </p>
+            </Link>
            <Link
             href="/parent/profile"
             className="rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md"

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getCurrentTeacher } from "@/lib/auth/teacher";
+import { notifyParentsAboutStudentEvent } from "@/lib/notifications/parents";
 
 const VALID_STATUSES = [
   "present",
@@ -250,6 +251,15 @@ export async function POST(request: NextRequest) {
         remarks,
       ]
     );
+
+    await notifyParentsAboutStudentEvent({
+      schoolId: teacher.schoolId,
+      studentId,
+      title: `Attendance update: ${status}`,
+      message: `Your child was marked ${status.toLowerCase()} on ${new Date(attendanceDate).toLocaleDateString("en-NG")}.`,
+      type: "attendance",
+      link: "/parent/attendance",
+    });
 
     return NextResponse.json(
       { attendance: result.rows[0] },

@@ -7,14 +7,19 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const email = String(body.email ?? "").trim().toLowerCase();
+    // Supports both existing email login and student Login ID.
+    // "email" remains accepted for backwards compatibility.
+    const identifier = String(
+      body.identifier ?? body.email ?? ""
+    ).trim();
+
     const password = String(body.password ?? "");
 
-    if (!email || !password) {
+    if (!identifier || !password) {
       return Response.json(
         {
           success: false,
-          message: "Email and password are required.",
+          message: "Login ID/email and password are required.",
         },
         { status: 400 }
       );
@@ -24,14 +29,16 @@ export async function POST(request: NextRequest) {
       `SELECT
          id,
          email,
+         login_id,
          password_hash,
          first_name,
          last_name,
          status
        FROM users
        WHERE LOWER(email) = LOWER($1)
+          OR LOWER(login_id) = LOWER($1)
        LIMIT 1`,
-      [email]
+      [identifier]
     );
 
     const user = result.rows[0];
@@ -40,7 +47,7 @@ export async function POST(request: NextRequest) {
       return Response.json(
         {
           success: false,
-          message: "Invalid email or password.",
+          message: "Invalid Login ID/email or password.",
         },
         { status: 401 }
       );
@@ -65,13 +72,11 @@ export async function POST(request: NextRequest) {
       return Response.json(
         {
           success: false,
-          message: "Invalid email or password.",
+          message: "Invalid Login ID/email or password.",
         },
         { status: 401 }
       );
     }
-
-    await createSession(user.id);
 
     const membershipResult = await pool.query(
       `SELECT
@@ -84,21 +89,63 @@ export async function POST(request: NextRequest) {
        ORDER BY sm.created_at ASC`,
       [user.id]
     );
-         console.log("LOGIN DEBUG:", {
-      email: user.email,
+
+    const memberships = membershipResult.rows;
+
+    // Student accounts require an explicitly enabled student portal.
+    const studentMembership = memberships.find(
+      (membership) => membership.role === "student"
+    );
+
+    if (studentMembership) {
+      const studentResult = await pool.query(
+        `SELECT
+           st.id,
+           st.portal_enabled,
+           st.status
+         FROM students st
+         WHERE st.user_id = $1
+           AND st.school_id = $2
+         LIMIT 1`,
+        [user.id, studentMembership.school_id]
+      );
+
+      const student = studentResult.rows[0];
+
+      if (
+        !student ||
+        student.portal_enabled !== true ||
+        student.status !== "active"
+      ) {
+        return Response.json(
+          {
+            success: false,
+            message: "Student Portal access is not enabled for this account.",
+          },
+          { status: 403 }
+        );
+      }
+    }
+
+    await createSession(user.id);
+
+    console.log("LOGIN DEBUG:", {
+      identifier,
       userId: user.id,
-      memberships: membershipResult.rows,
+      memberships,
     });
+
     return Response.json({
       success: true,
       message: "Login successful.",
       user: {
         id: user.id,
         email: user.email,
+        loginId: user.login_id,
         firstName: user.first_name,
         lastName: user.last_name,
       },
-      memberships: membershipResult.rows,
+      memberships,
     });
   } catch (error) {
     console.error("Login error:", error);

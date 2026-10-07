@@ -34,14 +34,16 @@ export default function LoginPage() {
         setError(data.message ?? "Invalid email or password.");
         return;
       }
+const role = data.memberships?.[0]?.role;
 
-      const role = data.memberships?.[0]?.role;
-
-if (role === "parent") {
+if (role === "student") {
+  window.location.href = "/student";
+} else if (role === "parent") {
   window.location.href = "/parent";
 } else {
   window.location.href = "/dashboard";
 }
+
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -77,7 +79,7 @@ if (role === "parent") {
 
             <input
               required
-              type="email"
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"

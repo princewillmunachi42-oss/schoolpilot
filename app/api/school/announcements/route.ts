@@ -1,6 +1,9 @@
 	import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
+import { notifyStudentsAboutAnnouncement } from "@/lib/notifications/announcements";
+import { notifyParentsAboutAnnouncement } from "@/lib/notifications/parents";
+import { notifyTeachersAboutAnnouncement } from "@/lib/notifications/teachers";
 
 async function getMembership(userId: string) {
   const result = await pool.query(
@@ -209,6 +212,32 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 ]
   );
 
+  if (status === "published" && (audience === "all" || audience === "students")) {
+    await notifyStudentsAboutAnnouncement({
+      schoolId: membership.school_id,
+        announcementId: result.rows[0].id,
+      title: result.rows[0].title,
+      audience,
+    });
+  }
+
+  if (status === "published" && (audience === "all" || audience === "parents")) {
+    await notifyParentsAboutAnnouncement({
+      schoolId: membership.school_id,
+      title: result.rows[0].title,
+      audience,
+    });
+  }
+
+  if (status === "published" && (audience === "all" || audience === "teachers")) {
+    await notifyTeachersAboutAnnouncement({
+      schoolId: membership.school_id,
+      announcementId: result.rows[0].id,
+      title: result.rows[0].title,
+      audience,
+    });
+  }
+
   return NextResponse.json(
     {
       success: true,
@@ -354,6 +383,32 @@ export async function PUT(request: NextRequest) {
       membership.school_id,
     ]
   );
+
+  if (status === "published" && (audience === "all" || audience === "parents")) {
+    await notifyParentsAboutAnnouncement({
+      schoolId: membership.school_id,
+      title: result.rows[0].title,
+      audience,
+    });
+  }
+
+  if (status === "published" && (audience === "all" || audience === "students")) {
+    await notifyStudentsAboutAnnouncement({
+      schoolId: membership.school_id,
+        announcementId: result.rows[0].id,
+      title: result.rows[0].title,
+      audience,
+    });
+  }
+
+  if (status === "published" && (audience === "all" || audience === "teachers")) {
+    await notifyTeachersAboutAnnouncement({
+      schoolId: membership.school_id,
+      announcementId: result.rows[0].id,
+      title: result.rows[0].title,
+      audience,
+    });
+  }
 
   return NextResponse.json({
     success: true,

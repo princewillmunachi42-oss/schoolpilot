@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getCurrentTeacher } from "@/lib/auth/teacher";
-
+import { notifyStudentsAboutAssignment } from "@/lib/notifications/assignments";
 async function getTeacherContext() {
   const teacher = await getCurrentTeacher();
 
@@ -210,8 +210,32 @@ export async function POST(request: NextRequest) {
       ]
     );
 
+    const assignment = result.rows[0];
+
+    if (status === "published") {
+      const subjectResult = await pool.query(
+        `SELECT name
+         FROM subjects
+         WHERE id = $1
+           AND school_id = $2
+         LIMIT 1`,
+        [subjectId, teacher.schoolId]
+      );
+
+      const subjectName =
+        subjectResult.rows[0]?.name ?? "Subject";
+
+      await notifyStudentsAboutAssignment({
+        schoolId: teacher.schoolId,
+        assignmentId: assignment.id,
+        classId,
+        title: assignment.title,
+        subjectName,
+      });
+    }
+
     return NextResponse.json(
-      { assignment: result.rows[0] },
+      { assignment },
       { status: 201 }
     );
   } catch (error) {
@@ -265,7 +289,12 @@ export async function PUT(request: NextRequest) {
     }
 
     const existing = await pool.query(
-      `SELECT id
+      `SELECT
+         id,
+         status,
+         class_id,
+         subject_id,
+         title
        FROM assignments
        WHERE id = $1
          AND school_id = $2
@@ -334,8 +363,35 @@ export async function PUT(request: NextRequest) {
       ]
     );
 
+    const assignment = result.rows[0];
+
+    const wasDraft = existing.rows[0].status === "draft";
+    const isNowPublished = assignment.status === "published";
+
+    if (wasDraft && isNowPublished) {
+      const subjectResult = await pool.query(
+        `SELECT name
+         FROM subjects
+         WHERE id = $1
+           AND school_id = $2
+         LIMIT 1`,
+        [assignment.subject_id, teacher.schoolId]
+      );
+
+      const subjectName =
+        subjectResult.rows[0]?.name ?? "Subject";
+
+      await notifyStudentsAboutAssignment({
+        schoolId: teacher.schoolId,
+        assignmentId: assignment.id,
+        classId: assignment.class_id,
+        title: assignment.title,
+        subjectName,
+      });
+    }
+
     return NextResponse.json({
-      assignment: result.rows[0],
+      assignment,
     });
   } catch (error) {
     console.error("Teacher assignments PUT error:", error);

@@ -155,9 +155,14 @@ export async function GET(request: NextRequest) {
        st.phone,
        st.photo_url,
        st.status,
+       st.portal_enabled,
+       st.user_id,
+       u.login_id,
        st.class_id,
        c.name AS class_name
      FROM students st
+     LEFT JOIN users u
+       ON u.id = st.user_id
      LEFT JOIN classes c
        ON c.id = st.class_id
       AND c.school_id = st.school_id

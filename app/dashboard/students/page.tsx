@@ -16,6 +16,9 @@ type Student = {
   status: "active" | "inactive" | "graduated" | "withdrawn";
   class_id: string | null;
   class_name: string | null;
+  portal_enabled: boolean;
+  user_id: string | null;
+  login_id: string | null;
 };
 
 type SchoolClass = {
@@ -44,6 +47,12 @@ export default function StudentsPage() {
   const [showAddForm, setShowAddForm] = useState(false);
 
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [enablingPortal, setEnablingPortal] = useState<string | null>(null);
+  const [portalCredentials, setPortalCredentials] = useState<{
+    studentName: string;
+    loginId: string;
+    temporaryPassword: string;
+  } | null>(null);
   const [editForm, setEditForm] = useState({
     admissionNumber: "",
     classId: "",
@@ -240,6 +249,67 @@ export default function StudentsPage() {
     }
   }
 
+  async function enablePortal(student: Student) {
+    if (student.status !== "active") {
+      setError("Only active students can be given portal access.");
+      return;
+    }
+
+    if (student.portal_enabled) {
+      setError("This student's portal access is already enabled.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Enable Student Portal access for ${studentName(student)}?\\n\\nA secure Login ID and temporary password will be generated.`
+    );
+
+    if (!confirmed) return;
+
+    setMessage("");
+    setError("");
+    setPortalCredentials(null);
+    setEnablingPortal(student.id);
+
+    try {
+      const response = await fetch("/api/school/students/portal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          studentId: student.id,
+          action: "enable",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "Unable to enable student portal access."
+        );
+      }
+
+      setPortalCredentials({
+        studentName: studentName(student),
+        loginId: data.credentials.loginId,
+        temporaryPassword: data.credentials.temporaryPassword,
+      });
+
+      setMessage("Student Portal access enabled successfully.");
+      await loadStudents();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to enable student portal access."
+      );
+    } finally {
+      setEnablingPortal(null);
+    }
+  }
+
   function studentName(student: Student) {
     return [student.first_name, student.other_name, student.last_name]
       .filter(Boolean)
@@ -295,6 +365,62 @@ export default function StudentsPage() {
           <div className="mb-6 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
             {error}
           </div>
+        )}
+
+        {portalCredentials && (
+          <section className="mb-6 rounded-xl border border-primary/30 bg-primary/5 p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">
+                  Student Portal Credentials
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Portal access has been enabled for{" "}
+                  <span className="font-semibold text-foreground">
+                    {portalCredentials.studentName}
+                  </span>
+                  .
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Save these credentials securely. The temporary password will
+                  not be shown again after this message is closed.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPortalCredentials(null)}
+                className="rounded-lg border px-3 py-2 text-sm font-semibold hover:bg-muted"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-lg border bg-background p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Login ID
+                </p>
+                <p className="mt-2 break-all font-mono text-lg font-bold">
+                  {portalCredentials.loginId}
+                </p>
+              </div>
+
+              <div className="rounded-lg border bg-background p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Temporary Password
+                </p>
+                <p className="mt-2 break-all font-mono text-lg font-bold">
+                  {portalCredentials.temporaryPassword}
+                </p>
+              </div>
+            </div>
+
+            <p className="mt-4 text-xs text-muted-foreground">
+              Give these credentials to the student securely. The student
+              should change the temporary password after signing in.
+            </p>
+          </section>
         )}
 
         <section className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -751,7 +877,7 @@ export default function StudentsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-left text-sm">
+              <table className="w-full min-w-[1100px] text-left text-sm">
                 <thead className="border-b bg-muted/40">
                   <tr>
                     <th className="px-6 py-4 font-semibold">Student</th>
@@ -759,6 +885,7 @@ export default function StudentsPage() {
                     <th className="px-6 py-4 font-semibold">Class</th>
                     <th className="px-6 py-4 font-semibold">Gender</th>
                     <th className="px-6 py-4 font-semibold">Status</th>
+                    <th className="px-6 py-4 font-semibold">Portal</th>
                     <th className="px-6 py-4 text-right font-semibold">
                       Actions
                     </th>
@@ -808,6 +935,34 @@ export default function StudentsPage() {
   >
     {student.status}
   </span>
+</td>
+
+<td className="px-6 py-4">
+  {student.portal_enabled ? (
+    <div>
+      <span className="inline-flex rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success">
+        Enabled
+      </span>
+      {student.login_id && (
+        <p className="mt-1 font-mono text-xs text-muted-foreground">
+          {student.login_id}
+        </p>
+      )}
+    </div>
+  ) : student.status === "active" ? (
+    <button
+      type="button"
+      onClick={() => enablePortal(student)}
+      disabled={enablingPortal === student.id}
+      className="rounded-lg border border-primary/30 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {enablingPortal === student.id ? "Enabling..." : "Enable Portal"}
+    </button>
+  ) : (
+    <span className="text-xs text-muted-foreground">
+      Not available
+    </span>
+  )}
 </td>
 
 <td className="px-6 py-4">
