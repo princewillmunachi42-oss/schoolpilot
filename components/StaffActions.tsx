@@ -53,7 +53,7 @@ export default function StaffActions({
     <div className="flex flex-wrap gap-2">
       <a
         href={`/dashboard/staff/edit?id=${encodeURIComponent(id)}`}
-        className="inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-sm font-semibold hover:bg-muted"
+        className="inline-flex min-h-10 items-center justify-center rounded-xl border bg-background px-3.5 py-2 text-sm font-semibold transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
       >
         Edit
       </a>
@@ -62,7 +62,7 @@ export default function StaffActions({
         type="button"
         onClick={handleDeactivate}
         disabled={deactivating}
-        className="inline-flex min-h-10 items-center justify-center rounded-lg border border-destructive/30 px-3 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex min-h-10 items-center justify-center rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-2 text-sm font-semibold text-destructive transition-all hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {deactivating ? "Deactivating..." : "Deactivate"}
       </button>

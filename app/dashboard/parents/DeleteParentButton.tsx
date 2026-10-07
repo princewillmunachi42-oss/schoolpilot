@@ -56,7 +56,7 @@ export default function DeleteParentButton({
       type="button"
       onClick={handleDelete}
       disabled={deleting}
-      className="rounded-lg border border-destructive/30 px-4 py-2 text-sm font-semibold text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex min-h-10 items-center justify-center rounded-xl border border-destructive/30 bg-destructive/5 px-3.5 py-2 text-sm font-semibold text-destructive transition-all hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50"
     >
       {deleting ? "Deleting..." : "Delete"}
     </button>

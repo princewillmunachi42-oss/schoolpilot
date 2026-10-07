@@ -70,37 +70,39 @@ export default function EditParentButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-muted"
+        className="inline-flex min-h-10 items-center justify-center rounded-xl border bg-background px-3.5 py-2 text-sm font-semibold transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
       >
         Edit
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-2xl border bg-card p-6 shadow-xl">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-semibold">
-                  Edit Parent
-                </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg overflow-hidden rounded-2xl border bg-card shadow-2xl">
+            <div className="border-b bg-muted/20 px-5 py-5 sm:px-6">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold">
+                    Edit Parent
+                  </h2>
 
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Update this parent or guardian's information.
-                </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Update this parent or guardian's information.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex min-h-10 items-center justify-center rounded-xl border bg-background px-3.5 py-2 text-sm font-semibold transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+                >
+                  Close
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="rounded-lg px-3 py-2 text-sm hover:bg-muted"
-              >
-                Close
-              </button>
             </div>
 
             <form
               onSubmit={handleSave}
-              className="mt-6 grid gap-4"
+              className="grid gap-4 p-5 sm:p-6"
             >
               <div>
                 <label
@@ -117,7 +119,7 @@ export default function EditParentButton({
                     setFullName(event.target.value)
                   }
                   required
-                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:border-primary"
+                  className="min-h-11 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
 
@@ -136,7 +138,7 @@ export default function EditParentButton({
                   onChange={(event) =>
                     setEmail(event.target.value)
                   }
-                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:border-primary"
+                  className="min-h-11 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
 
@@ -155,7 +157,7 @@ export default function EditParentButton({
                   onChange={(event) =>
                     setPhone(event.target.value)
                   }
-                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:border-primary"
+                  className="min-h-11 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
 
@@ -174,7 +176,7 @@ export default function EditParentButton({
                     setAddress(event.target.value)
                   }
                   rows={3}
-                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:border-primary"
+                  className="min-h-11 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
               </div>
 
@@ -192,7 +194,7 @@ export default function EditParentButton({
                   onChange={(event) =>
                     setStatus(event.target.value)
                   }
-                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:border-primary"
+                  className="min-h-11 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none transition-all placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
@@ -203,7 +205,7 @@ export default function EditParentButton({
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="rounded-lg border px-4 py-2.5 text-sm font-semibold hover:bg-muted"
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl border bg-background px-4 py-2.5 text-sm font-semibold transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
                 >
                   Cancel
                 </button>
@@ -211,7 +213,7 @@ export default function EditParentButton({
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving ? "Saving..." : "Save Changes"}
                 </button>

@@ -1,8 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import {
+  ArrowLeft,
+  BookMarked,
+  CheckCircle2,
+  GraduationCap,
+  Plus,
+  School,
+  UserRound,
+  Users,
+} from "lucide-react";
 import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import TeacherAssignmentActions from "@/components/TeacherAssignmentActions";
+
 export default async function TeacherAssignmentsPage() {
   const user = await getCurrentUser();
 
@@ -110,39 +121,140 @@ export default async function TeacherAssignmentsPage() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8">
+      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <header className="space-y-4">
           <Link
             href="/dashboard"
-            className="text-sm font-medium text-primary hover:text-primary-hover"
+            className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            ← Back to Dashboard
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
           </Link>
 
-          <h1 className="mt-3 text-3xl font-bold tracking-tight">
-            Teacher Assignments
-          </h1>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary">
+                <Users className="h-4 w-4" />
+                Operations
+              </div>
 
-          <p className="mt-2 text-muted-foreground">
-            Assign teachers to classes and subjects in your school.
-          </p>
-        </div>
+              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                Teacher Assignments
+              </h1>
 
-        <div className="grid gap-8 lg:grid-cols-2">
-          <section className="rounded-2xl border bg-card p-6 shadow-sm">
-            <h2 className="text-xl font-semibold">
-              Assign Teacher to Class
-            </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                Assign teachers to classes and subjects, then manage
+                the assignments from one place.
+              </p>
+            </div>
 
-            <p className="mt-1 text-sm text-muted-foreground">
-              Set a teacher as the primary teacher for a class when
-              needed.
+            <div className="flex items-center gap-2 rounded-xl border bg-card px-3.5 py-2.5 text-sm shadow-sm">
+              <School className="h-4 w-4 text-primary" />
+              <span className="font-medium">
+                {staff.length} active teachers
+              </span>
+            </div>
+          </div>
+        </header>
+
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-2xl border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+            <div className="flex items-center justify-between">
+              <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
+                <UserRound className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">
+                Staff
+              </span>
+            </div>
+
+            <p className="mt-5 text-3xl font-bold">
+              {staff.length}
             </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Active teachers
+            </p>
+          </div>
+
+          <div className="rounded-2xl border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+            <div className="flex items-center justify-between">
+              <div className="rounded-xl bg-accent/10 p-2.5 text-accent">
+                <GraduationCap className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">
+                Classes
+              </span>
+            </div>
+
+            <p className="mt-5 text-3xl font-bold">
+              {classes.length}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Active classes
+            </p>
+          </div>
+
+          <div className="rounded-2xl border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+            <div className="flex items-center justify-between">
+              <div className="rounded-xl bg-success/10 p-2.5 text-success">
+                <BookMarked className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">
+                Subjects
+              </span>
+            </div>
+
+            <p className="mt-5 text-3xl font-bold">
+              {subjects.length}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Available subjects
+            </p>
+          </div>
+
+          <div className="rounded-2xl border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+            <div className="flex items-center justify-between">
+              <div className="rounded-xl bg-warning/10 p-2.5 text-warning">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+              <span className="text-xs font-medium text-muted-foreground">
+                Assignments
+              </span>
+            </div>
+
+            <p className="mt-5 text-3xl font-bold">
+              {classTeachers.length + teacherSubjects.length}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Active teacher mappings
+            </p>
+          </div>
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-2">
+          <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+            <div className="border-b bg-muted/30 px-5 py-5 sm:px-6">
+              <div className="flex items-start gap-3">
+                <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
+                  <GraduationCap className="h-5 w-5" />
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    Assign Teacher to Class
+                  </h2>
+                  <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                    Assign a teacher to a class and optionally make
+                    them the primary class teacher.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             <form
               action="/api/school/teacher-assignments"
               method="POST"
-              className="mt-6 space-y-5"
+              className="space-y-5 p-5 sm:p-6"
             >
               <input
                 type="hidden"
@@ -153,7 +265,7 @@ export default async function TeacherAssignmentsPage() {
               <div>
                 <label
                   htmlFor="classStaffId"
-                  className="mb-2 block text-sm font-medium"
+                  className="mb-2 block text-sm font-semibold"
                 >
                   Teacher
                 </label>
@@ -163,7 +275,7 @@ export default async function TeacherAssignmentsPage() {
                   name="staffId"
                   required
                   defaultValue=""
-                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:border-primary"
+                  className="min-h-11 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="" disabled>
                     Select teacher
@@ -184,7 +296,7 @@ export default async function TeacherAssignmentsPage() {
               <div>
                 <label
                   htmlFor="classId"
-                  className="mb-2 block text-sm font-medium"
+                  className="mb-2 block text-sm font-semibold"
                 >
                   Class
                 </label>
@@ -194,7 +306,7 @@ export default async function TeacherAssignmentsPage() {
                   name="classId"
                   required
                   defaultValue=""
-                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:border-primary"
+                  className="min-h-11 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="" disabled>
                     Select class
@@ -208,40 +320,57 @@ export default async function TeacherAssignmentsPage() {
                 </select>
               </div>
 
-              <label className="flex items-center gap-3">
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border bg-muted/30 p-4 transition-colors hover:bg-muted/50">
                 <input
                   type="checkbox"
                   name="isPrimary"
-                  className="h-4 w-4 rounded border"
+                  className="mt-0.5 h-4 w-4 rounded border"
                 />
 
-                <span className="text-sm font-medium">
-                  Make this the primary teacher for this class
+                <span>
+                  <span className="block text-sm font-semibold">
+                    Primary class teacher
+                  </span>
+                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                    Mark this teacher as the primary teacher for
+                    the selected class.
+                  </span>
                 </span>
               </label>
 
               <button
                 type="submit"
-                className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover"
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary-hover hover:shadow-md"
               >
+                <Plus className="h-4 w-4" />
                 Assign to Class
               </button>
             </form>
-          </section>
+          </div>
 
-          <section className="rounded-2xl border bg-card p-6 shadow-sm">
-            <h2 className="text-xl font-semibold">
-              Assign Teacher to Subject
-            </h2>
+          <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+            <div className="border-b bg-muted/30 px-5 py-5 sm:px-6">
+              <div className="flex items-start gap-3">
+                <div className="rounded-xl bg-accent/10 p-2.5 text-accent">
+                  <BookMarked className="h-5 w-5" />
+                </div>
 
-            <p className="mt-1 text-sm text-muted-foreground">
-              Assign a subject generally or specifically to a class.
-            </p>
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    Assign Teacher to Subject
+                  </h2>
+                  <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                    Assign a subject generally or limit it to a
+                    specific class.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             <form
               action="/api/school/teacher-assignments"
               method="POST"
-              className="mt-6 space-y-5"
+              className="space-y-5 p-5 sm:p-6"
             >
               <input
                 type="hidden"
@@ -252,7 +381,7 @@ export default async function TeacherAssignmentsPage() {
               <div>
                 <label
                   htmlFor="subjectStaffId"
-                  className="mb-2 block text-sm font-medium"
+                  className="mb-2 block text-sm font-semibold"
                 >
                   Teacher
                 </label>
@@ -262,7 +391,7 @@ export default async function TeacherAssignmentsPage() {
                   name="staffId"
                   required
                   defaultValue=""
-                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:border-primary"
+                  className="min-h-11 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="" disabled>
                     Select teacher
@@ -280,7 +409,7 @@ export default async function TeacherAssignmentsPage() {
               <div>
                 <label
                   htmlFor="subjectId"
-                  className="mb-2 block text-sm font-medium"
+                  className="mb-2 block text-sm font-semibold"
                 >
                   Subject
                 </label>
@@ -290,14 +419,17 @@ export default async function TeacherAssignmentsPage() {
                   name="subjectId"
                   required
                   defaultValue=""
-                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:border-primary"
+                  className="min-h-11 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="" disabled>
                     Select subject
                   </option>
 
                   {subjects.map((subject) => (
-                    <option key={subject.id} value={subject.id}>
+                    <option
+                      key={subject.id}
+                      value={subject.id}
+                    >
                       {subject.name} — {subject.code}
                     </option>
                   ))}
@@ -307,7 +439,7 @@ export default async function TeacherAssignmentsPage() {
               <div>
                 <label
                   htmlFor="subjectClassId"
-                  className="mb-2 block text-sm font-medium"
+                  className="mb-2 block text-sm font-semibold"
                 >
                   Specific Class
                 </label>
@@ -316,7 +448,7 @@ export default async function TeacherAssignmentsPage() {
                   id="subjectClassId"
                   name="classId"
                   defaultValue=""
-                  className="w-full rounded-lg border bg-background px-3 py-2.5 outline-none focus:border-primary"
+                  className="min-h-11 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
                 >
                   <option value="">
                     All classes / general assignment
@@ -332,32 +464,58 @@ export default async function TeacherAssignmentsPage() {
 
               <button
                 type="submit"
-                className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover"
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary-hover hover:shadow-md"
               >
+                <Plus className="h-4 w-4" />
                 Assign Subject
               </button>
             </form>
-          </section>
-        </div>
+          </div>
+        </section>
 
-        <section className="mt-8 rounded-2xl border bg-card shadow-sm">
-          <div className="border-b p-6">
-            <h2 className="text-xl font-semibold">
-              Class Teacher Assignments
-            </h2>
+        <section className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+          <div className="border-b px-5 py-5 sm:px-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                    <Users className="h-4 w-4" />
+                  </div>
 
-            <p className="mt-1 text-sm text-muted-foreground">
-              {classTeachers.length}{" "}
-              {classTeachers.length === 1
-                ? "assignment"
-                : "assignments"}
-            </p>
+                  <h2 className="text-lg font-semibold">
+                    Class Teacher Assignments
+                  </h2>
+                </div>
+
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {classTeachers.length}{" "}
+                  {classTeachers.length === 1
+                    ? "assignment"
+                    : "assignments"}{" "}
+                  currently configured.
+                </p>
+              </div>
+
+              <span className="inline-flex w-fit items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {classTeachers.length} active
+              </span>
+            </div>
           </div>
 
           {classTeachers.length === 0 ? (
-            <div className="p-10 text-center">
-              <p className="font-medium">
+            <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
+              <div className="rounded-2xl bg-primary/10 p-4 text-primary">
+                <GraduationCap className="h-8 w-8" />
+              </div>
+
+              <h3 className="mt-4 font-semibold">
                 No class teacher assignments yet
+              </h3>
+
+              <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+                Use the assignment form above to connect teachers
+                with your active classes.
               </p>
             </div>
           ) : (
@@ -365,87 +523,154 @@ export default async function TeacherAssignmentsPage() {
               {classTeachers.map((assignment) => (
                 <div
                   key={assignment.id}
-                  className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between"
+                  className="p-5 transition-colors hover:bg-muted/20 sm:p-6"
                 >
-                  <div>
-                    <h3 className="font-semibold">
-                      {assignment.first_name}{" "}
-                      {assignment.last_name}
-                    </h3>
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-semibold text-primary">
+                        {assignment.first_name
+                          .charAt(0)
+                          .toUpperCase()}
+                        {assignment.last_name
+                          .charAt(0)
+                          .toUpperCase()}
+                      </div>
 
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Staff ID: {assignment.staff_id}
-                    </p>
-                   <div className="mt-4 border-t pt-4">
-  <TeacherAssignmentActions
-    id={assignment.id}
-    assignmentType="class"
-  />
-</div>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Class: {assignment.class_name}
-                    </p>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-semibold">
+                            {assignment.first_name}{" "}
+                            {assignment.last_name}
+                          </h3>
+
+                          {assignment.is_primary && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Primary
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Staff ID: {assignment.staff_id}
+                        </p>
+
+                        <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm font-medium">
+                          <GraduationCap className="h-4 w-4 text-primary" />
+                          {assignment.class_name}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-t pt-4 lg:border-0 lg:pt-0">
+                      <TeacherAssignmentActions
+                        id={assignment.id}
+                        assignmentType="class"
+                      />
+                    </div>
                   </div>
-
-                  {assignment.is_primary && (
-                    <span className="inline-flex w-fit rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                      Primary Teacher
-                    </span>
-                  )}
                 </div>
               ))}
             </div>
           )}
         </section>
 
-        <section className="mt-8 rounded-2xl border bg-card shadow-sm">
-          <div className="border-b p-6">
-            <h2 className="text-xl font-semibold">
-              Teacher Subject Assignments
-            </h2>
+        <section className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+          <div className="border-b px-5 py-5 sm:px-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="rounded-lg bg-accent/10 p-2 text-accent">
+                    <BookMarked className="h-4 w-4" />
+                  </div>
 
-            <p className="mt-1 text-sm text-muted-foreground">
-              {teacherSubjects.length}{" "}
-              {teacherSubjects.length === 1
-                ? "assignment"
-                : "assignments"}
-            </p>
+                  <h2 className="text-lg font-semibold">
+                    Teacher Subject Assignments
+                  </h2>
+                </div>
+
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {teacherSubjects.length}{" "}
+                  {teacherSubjects.length === 1
+                    ? "assignment"
+                    : "assignments"}{" "}
+                  currently configured.
+                </p>
+              </div>
+
+              <span className="inline-flex w-fit items-center gap-2 rounded-full bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent">
+                <BookMarked className="h-3.5 w-3.5" />
+                {teacherSubjects.length} active
+              </span>
+            </div>
           </div>
 
           {teacherSubjects.length === 0 ? (
-            <div className="p-10 text-center">
-              <p className="font-medium">
+            <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
+              <div className="rounded-2xl bg-accent/10 p-4 text-accent">
+                <BookMarked className="h-8 w-8" />
+              </div>
+
+              <h3 className="mt-4 font-semibold">
                 No subject assignments yet
+              </h3>
+
+              <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+                Use the subject assignment form above to assign
+                teachers to subjects.
               </p>
             </div>
           ) : (
             <div className="divide-y">
               {teacherSubjects.map((assignment) => (
-                <div key={assignment.id} className="p-6">
-                  <h3 className="font-semibold">
-                    {assignment.first_name}{" "}
-                    {assignment.last_name}
-                  </h3>
+                <div
+                  key={assignment.id}
+                  className="p-5 transition-colors hover:bg-muted/20 sm:p-6"
+                >
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/10 font-semibold text-accent">
+                        {assignment.first_name
+                          .charAt(0)
+                          .toUpperCase()}
+                        {assignment.last_name
+                          .charAt(0)
+                          .toUpperCase()}
+                      </div>
 
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Staff ID: {assignment.staff_id}
-                  </p>
+                      <div className="min-w-0">
+                        <h3 className="font-semibold">
+                          {assignment.first_name}{" "}
+                          {assignment.last_name}
+                        </h3>
 
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Subject: {assignment.subject_name} (
-                    {assignment.subject_code})
-                  </p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Staff ID: {assignment.staff_id}
+                        </p>
 
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Class:{" "}
-                    {assignment.class_name || "General assignment"}
-                  </p>
-                 <div className="mt-4 border-t pt-4">
-  <TeacherAssignmentActions
-    id={assignment.id}
-    assignmentType="subject"
-  />
-</div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <span className="inline-flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-2 text-sm font-medium text-accent">
+                            <BookMarked className="h-4 w-4" />
+                            {assignment.subject_name} (
+                            {assignment.subject_code})
+                          </span>
+
+                          <span className="inline-flex items-center gap-1.5 rounded-lg bg-muted px-3 py-2 text-sm font-medium">
+                            <GraduationCap className="h-4 w-4 text-primary" />
+                            {assignment.class_name ||
+                              "General assignment"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-t pt-4 lg:border-0 lg:pt-0">
+                      <TeacherAssignmentActions
+                        id={assignment.id}
+                        assignmentType="subject"
+                      />
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -455,4 +680,3 @@ export default async function TeacherAssignmentsPage() {
     </main>
   );
 }
-
