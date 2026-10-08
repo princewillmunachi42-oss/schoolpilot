@@ -7,6 +7,7 @@ import {
   CalendarDays,
   CircleDollarSign,
   ClipboardList,
+  ClipboardCheck,
   GraduationCap,
   LayoutDashboard,
   Megaphone,
@@ -93,6 +94,16 @@ const navigationGroups = [
         label: "Class Progressions",
         href: "/dashboard/class-progressions",
         icon: ArrowUpDown,
+      },
+    ],
+  },
+  {
+    label: "Attendance",
+    items: [
+      {
+        label: "Staff Attendance",
+        href: "/dashboard/staff-attendance",
+        icon: ClipboardCheck,
       },
     ],
   },

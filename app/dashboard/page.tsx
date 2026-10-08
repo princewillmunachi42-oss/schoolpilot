@@ -6,6 +6,7 @@ import {
   ChevronDown,
   CircleDollarSign,
   ClipboardList,
+  ClipboardCheck,
   GraduationCap,
   LayoutDashboard,
   Megaphone,
@@ -126,111 +127,47 @@ export default async function DashboardPage() {
     {
       label: "Overview",
       items: [
-        {
-          label: "Overview",
-          href: "/dashboard",
-          icon: LayoutDashboard,
-          active: true,
-        },
+        { label: "Overview", href: "/dashboard", icon: LayoutDashboard, active: true },
       ],
     },
     {
       label: "Academic",
       items: [
-        {
-          label: "Academic Sessions",
-          href: "/dashboard/sessions",
-          icon: CalendarDays,
-        },
-        {
-          label: "Terms",
-          href: "/dashboard/terms",
-          icon: BookOpen,
-        },
-        {
-          label: "Classes",
-          href: "/dashboard/classes",
-          icon: GraduationCap,
-        },
-        {
-          label: "Subjects",
-          href: "/dashboard/subjects",
-          icon: BookMarked,
-        },
-        {
-          label: "Timetable",
-          href: "/dashboard/timetable",
-          icon: Clock3,
-        },
-        {
-          label: "Timetable Periods",
-          href: "/dashboard/timetable-periods",
-          icon: CalendarDays,
-        },
+        { label: "Academic Sessions", href: "/dashboard/sessions", icon: CalendarDays },
+        { label: "Terms", href: "/dashboard/terms", icon: BookOpen },
+        { label: "Classes", href: "/dashboard/classes", icon: GraduationCap },
+        { label: "Subjects", href: "/dashboard/subjects", icon: BookMarked },
+        { label: "Timetable", href: "/dashboard/timetable", icon: Clock3 },
+        { label: "Timetable Periods", href: "/dashboard/timetable-periods", icon: CalendarDays },
       ],
     },
     {
       label: "People",
       items: [
-        {
-          label: "Staff",
-          href: "/dashboard/staff",
-          icon: Users,
-        },
-        {
-          label: "Students",
-          href: "/dashboard/students",
-          icon: GraduationCap,
-        },
-        {
-          label: "Parents",
-          href: "/dashboard/parents",
-          icon: UserRound,
-        },
-        {
-          label: "Student Promotions",
-          href: "/dashboard/promotions",
-          icon: ArrowUpDown,
-        },
-        {
-          label: "Class Progressions",
-          href: "/dashboard/class-progressions",
-          icon: ArrowUpDown,
-        },
+        { label: "Staff", href: "/dashboard/staff", icon: Users },
+        { label: "Students", href: "/dashboard/students", icon: GraduationCap },
+        { label: "Parents", href: "/dashboard/parents", icon: UserRound },
+        { label: "Student Promotions", href: "/dashboard/promotions", icon: ArrowUpDown },
+        { label: "Class Progressions", href: "/dashboard/class-progressions", icon: ArrowUpDown },
+      ],
+    },
+    {
+      label: "Attendance",
+      items: [
+        { label: "Staff Attendance", href: "/dashboard/staff-attendance", icon: ClipboardCheck },
       ],
     },
     {
       label: "Operations",
       items: [
-        {
-          label: "Teacher Assignments",
-          href: "/dashboard/teacher-assignments",
-          icon: ClipboardList,
-        },
-        {
-          label: "Student Fees",
-          href: "/dashboard/fees",
-          icon: CircleDollarSign,
-        },
-        {
-          label: "Announcements",
-          href: "/dashboard/announcements",
-          icon: Megaphone,
-        },
-        {
-          label: "Communications",
-          href: "/dashboard/communications",
-          icon: MessageSquare,
-        },
-        {
-          label: "School Settings",
-          href: "/dashboard/settings",
-          icon: Settings,
-        },
+        { label: "Teacher Assignments", href: "/dashboard/teacher-assignments", icon: ClipboardList },
+        { label: "Student Fees", href: "/dashboard/fees", icon: CircleDollarSign },
+        { label: "Announcements", href: "/dashboard/announcements", icon: Megaphone },
+        { label: "Communications", href: "/dashboard/communications", icon: MessageSquare },
+        { label: "School Settings", href: "/dashboard/settings", icon: Settings },
       ],
     },
   ];
-
   return (
     <main className="min-h-screen bg-background text-foreground">
       <div className="flex min-h-screen">
