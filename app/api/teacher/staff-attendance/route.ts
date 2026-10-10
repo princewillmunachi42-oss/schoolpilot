@@ -359,18 +359,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (station.school_id !== staffUser.schoolId) {
-      await insertEvent(client, {
-        schoolId: station.school_id,
-        staffId: staffUser.staffId,
-        stationId: station.id,
-        eventType: "unauthorized",
-        userAgent: request.headers.get("user-agent"),
-        latitude,
-        longitude,
-        accuracy,
-      });
-
-      await client.query("COMMIT");
+      await client.query("ROLLBACK");
 
       return NextResponse.json(
         {
@@ -379,6 +368,7 @@ export async function POST(request: NextRequest) {
         },
         { status: 403 }
       );
+
     }
 
     if (station.status !== "active") {
