@@ -110,7 +110,13 @@ export default async function TeacherLayout({
             >
               Attendance
             </Link>
-
+          <Link
+  href="/teacher/staff-attendance"
+  className="block rounded-xl px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+>
+  Staff Attendance Scanner
+</Link>  
+          
             <Link
               href="/teacher/results"
               className="block rounded-xl px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -250,7 +256,13 @@ export default async function TeacherLayout({
                 >
                   Attendance
                 </Link>
-
+              <Link
+  href="/teacher/staff-attendance"
+  className="rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted"
+>
+  Scan QR
+</Link>
+              
                 <Link
                   href="/teacher/results"
                   className="rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted"

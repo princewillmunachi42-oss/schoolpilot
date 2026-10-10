@@ -588,45 +588,54 @@ export default function StaffAttendanceSettingsPage() {
                   </button>
                 </div>
 
-                {hasLocation ? (
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-xl border bg-background/60 px-4 py-3">
-                      <p className="text-xs text-muted-foreground">
-                        Latitude
-                      </p>
 
-                      <p className="mt-1 font-mono text-sm font-semibold">
-                        {settings.latitude}
-                      </p>
-                    </div>
+<div className="mt-4 grid gap-4 sm:grid-cols-2">
+  <label>
+    <span className="mb-2 block text-sm font-medium">
+      Latitude
+    </span>
+    <input
+      type="number"
+      step="any"
+      min="-90"
+      max="90"
+      value={settings.latitude ?? ""}
+      onChange={(event) =>
+        updateSetting(
+          "latitude",
+          event.target.value === ""
+            ? null
+            : Number(event.target.value)
+        )
+      }
+      placeholder="Enter school latitude"
+      className="h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+    />
+  </label>
 
-                    <div className="rounded-xl border bg-background/60 px-4 py-3">
-                      <p className="text-xs text-muted-foreground">
-                        Longitude
-                      </p>
-
-                      <p className="mt-1 font-mono text-sm font-semibold">
-                        {settings.longitude}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-4 flex items-start gap-3 rounded-xl border border-warning/20 bg-warning/10 px-4 py-3">
-                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-
-                    <div>
-                      <p className="text-sm font-semibold text-warning">
-                        School location not configured
-                      </p>
-
-                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                        Capture the school entrance location
-                        before staff can use geofenced
-                        attendance.
-                      </p>
-                    </div>
-                  </div>
-                )}
+  <label>
+    <span className="mb-2 block text-sm font-medium">
+      Longitude
+    </span>
+    <input
+      type="number"
+      step="any"
+      min="-180"
+      max="180"
+      value={settings.longitude ?? ""}
+      onChange={(event) =>
+        updateSetting(
+          "longitude",
+          event.target.value === ""
+            ? null
+            : Number(event.target.value)
+        )
+      }
+      placeholder="Enter school longitude"
+      className="h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+    />
+  </label>
+</div>
 
                 {locationMessage && (
                   <div className="mt-4 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-xs leading-5 text-primary">

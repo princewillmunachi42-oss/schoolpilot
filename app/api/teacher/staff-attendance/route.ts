@@ -201,7 +201,7 @@ async function insertEvent(
 }
 
 export async function POST(request: NextRequest) {
-  const staffUser = await getCurrentStaffAttendanceUser();
+  const staffUser = await getCurrentStaffAttendanceUser(request);
 
   if (!staffUser) {
     return NextResponse.json(

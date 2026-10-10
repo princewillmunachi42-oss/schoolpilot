@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getCurrentStaffAttendanceUser } from "@/lib/auth/staff-attendance";
 
@@ -13,8 +13,8 @@ function formatLocalDate(
   }).format(date);
 }
 
-export async function GET() {
-  const staffUser = await getCurrentStaffAttendanceUser();
+export async function GET(request: NextRequest) {
+  const staffUser = await getCurrentStaffAttendanceUser(request);
 
   if (!staffUser) {
     return NextResponse.json(
@@ -144,7 +144,7 @@ export async function GET() {
         clockOutTime: settings.clock_out_time,
         lateGraceMinutes: Number(settings.late_grace_minutes ?? 15),
       },
-      today: todayAttendance,
+      today: todayAttendance ? { ...todayAttendance, clockInAt: todayAttendance.clock_in_at, clockOutAt: todayAttendance.clock_out_at } : null,
       history: historyResult.rows,
       summary: {
         totalDays: Number(summary.total_days ?? 0),
