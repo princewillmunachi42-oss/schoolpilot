@@ -634,6 +634,23 @@ export async function POST(request: NextRequest) {
         accuracy,
       });
 
+      await client.query(
+        `INSERT INTO notifications
+           (school_id, user_id, title, message, type, link)
+         SELECT $1, sm.user_id, $2, $3, 'staff_attendance', $4
+         FROM school_members sm
+         INNER JOIN users u ON u.id = sm.user_id
+         WHERE sm.school_id = $1
+           AND sm.role IN ('owner', 'principal', 'admin')
+           AND u.status = 'active'`,
+        [
+          staffUser.schoolId,
+          lateMinutes > 0 ? "Late staff clock-in" : "Staff clock-in recorded",
+          `${staffUser.staff.first_name} ${staffUser.staff.last_name} clocked in${lateMinutes > 0 ? ` ${lateMinutes} minutes late` : ""}.`,
+          "/dashboard/staff-attendance/history",
+        ]
+      );
+
       await client.query("COMMIT");
 
       return NextResponse.json({
@@ -735,7 +752,24 @@ export async function POST(request: NextRequest) {
       accuracy,
     });
 
-    await client.query("COMMIT");
+    await client.query(
+        `INSERT INTO notifications
+           (school_id, user_id, title, message, type, link)
+         SELECT $1, sm.user_id, $2, $3, 'staff_attendance', $4
+         FROM school_members sm
+         INNER JOIN users u ON u.id = sm.user_id
+         WHERE sm.school_id = $1
+           AND sm.role IN ('owner', 'principal', 'admin')
+           AND u.status = 'active'`,
+        [
+          staffUser.schoolId,
+          "Staff clock-out recorded",
+          `${staffUser.staff.first_name} ${staffUser.staff.last_name} clocked out successfully.`,
+          "/dashboard/staff-attendance/history",
+        ]
+      );
+
+      await client.query("COMMIT");
 
     return NextResponse.json({
       success: true,

@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { notifyStudentsAboutAnnouncement } from "@/lib/notifications/announcements";
 import { notifyParentsAboutAnnouncement } from "@/lib/notifications/parents";
 import { notifyTeachersAboutAnnouncement } from "@/lib/notifications/teachers";
+import { notifySchoolManagement } from "@/lib/notifications/management";
 
 async function getMembership(userId: string) {
   const result = await pool.query(
@@ -212,6 +213,16 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 ]
   );
 
+  if (status === "published") {
+    await notifySchoolManagement({
+      schoolId: membership.school_id,
+      title: "Announcement published",
+      message: `"${result.rows[0].title}" has been published.`,
+      type: "announcement",
+      link: "/dashboard/announcements",
+    });
+  }
+
   if (status === "published" && (audience === "all" || audience === "students")) {
     await notifyStudentsAboutAnnouncement({
       schoolId: membership.school_id,
@@ -383,6 +394,19 @@ export async function PUT(request: NextRequest) {
       membership.school_id,
     ]
   );
+
+  if (
+    status === "published" &&
+    existing.rows[0].status !== "published"
+  ) {
+    await notifySchoolManagement({
+      schoolId: membership.school_id,
+      title: "Announcement published",
+      message: `"${result.rows[0].title}" has been published.`,
+      type: "announcement",
+      link: "/dashboard/announcements",
+    });
+  }
 
   if (status === "published" && (audience === "all" || audience === "parents")) {
     await notifyParentsAboutAnnouncement({

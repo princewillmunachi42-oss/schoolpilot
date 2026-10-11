@@ -4,16 +4,10 @@ import pool from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   try {
-    console.log("ATTENDANCE STEP 1: request received");
+
 
     const parent = await getCurrentParent();
 
-    console.log(
-      "ATTENDANCE STEP 2: parent loaded",
-      parent
-        ? `school=${parent.schoolId}, parent=${parent.parentId}`
-        : "NO PARENT"
-    );
 
     if (!parent) {
       return NextResponse.json(
@@ -34,7 +28,6 @@ export async function GET(request: NextRequest) {
     const termId =
       request.nextUrl.searchParams.get("term")?.trim() || "";
 
-    console.log("ATTENDANCE STEP 3: parameters loaded");
 
     const childrenResult = await pool.query(
       `SELECT
@@ -59,15 +52,11 @@ export async function GET(request: NextRequest) {
       [parent.parentId, parent.schoolId]
     );
 
-    console.log(
-      "ATTENDANCE STEP 4: children query completed",
-      childrenResult.rows.length
-    );
 
     const children = childrenResult.rows;
 
     if (children.length === 0) {
-      console.log("ATTENDANCE STEP 5: no children");
+
 
       return NextResponse.json({
         success: true,
@@ -94,10 +83,6 @@ export async function GET(request: NextRequest) {
 
     const selectedStudentId = selectedChild.id;
 
-    console.log(
-      "ATTENDANCE STEP 5: selected student",
-      selectedStudentId
-    );
 
     const sessionsResult = await pool.query(
       `SELECT
@@ -112,10 +97,6 @@ export async function GET(request: NextRequest) {
       [parent.schoolId]
     );
 
-    console.log(
-      "ATTENDANCE STEP 6: sessions query completed",
-      sessionsResult.rows.length
-    );
 
     const termsResult = await pool.query(
       `SELECT
@@ -132,10 +113,6 @@ export async function GET(request: NextRequest) {
       [parent.schoolId, sessionId]
     );
 
-    console.log(
-      "ATTENDANCE STEP 7: terms query completed",
-      termsResult.rows.length
-    );
 
     const recordsResult = await pool.query(
       `SELECT
@@ -167,12 +144,7 @@ export async function GET(request: NextRequest) {
       ]
     );
 
-    console.log(
-      "ATTENDANCE STEP 8: records query completed",
-      recordsResult.rows.length
-    );
 
-    console.log("ATTENDANCE STEP 9: sending response");
 
     return NextResponse.json({
       success: true,
@@ -183,20 +155,12 @@ export async function GET(request: NextRequest) {
       records: recordsResult.rows,
     });
   } catch (error) {
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : String(error);
-
-    console.log(
-      "ATTENDANCE STEP ERROR:",
-      errorMessage
-    );
+    console.error("Parent attendance request failed:", error);
 
     return NextResponse.json(
       {
         success: false,
-        message: errorMessage,
+        message: "Unable to load attendance records.",
       },
       { status: 500 }
     );

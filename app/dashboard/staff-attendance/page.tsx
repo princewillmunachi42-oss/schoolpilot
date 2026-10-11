@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
   Clock3,
+  Download,
+  History,
   Loader2,
   QrCode,
   Settings2,
@@ -34,6 +36,9 @@ type StaffAttendance = {
   clockOutAt: string | null;
   attendanceStatus: "present" | "late" | null;
   lateMinutes: number;
+  earlyDepartureMinutes: number;
+  departedEarly: boolean;
+  hoursWorkedMinutes: number | null;
   currentState: "not_clocked_in" | "clocked_in" | "completed";
 };
 
@@ -44,6 +49,8 @@ type Summary = {
   notClockedIn: number;
   clockedIn: number;
   completed: number;
+  earlyDepartures: number;
+  totalHoursWorkedMinutes: number;
 };
 
 type AttendanceResponse = {
@@ -74,6 +81,10 @@ function statusLabel(member: StaffAttendance) {
     return "Not clocked in";
   }
 
+  if (member.departedEarly) {
+    return "Early departure";
+  }
+
   if (member.currentState === "completed") {
     return member.attendanceStatus === "late"
       ? "Late · Completed"
@@ -83,6 +94,53 @@ function statusLabel(member: StaffAttendance) {
   return member.attendanceStatus === "late" ? "Late" : "Clocked in";
 }
 
+function formatDuration(minutes: number | null) {
+  if (minutes === null) return "—";
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return hours > 0
+    ? `${hours}h ${remainingMinutes}m`
+    : `${remainingMinutes}m`;
+}
+
+function exportAttendanceCsv(data: AttendanceResponse) {
+  const columns = [
+    "Date", "Staff ID", "Staff Name", "Role", "Status",
+    "Clock In", "Clock Out", "Late Minutes",
+    "Early Departure Minutes", "Hours Worked"
+  ];
+
+  const escapeCsv = (value: unknown) =>
+    '"' + String(value ?? "").replace(/"/g, '""') + '"';
+
+  const rows = data.staff.map((member) => [
+    data.date,
+    member.staffId,
+    member.fullName,
+    member.roleTitle || "Staff",
+    statusLabel(member),
+    member.clockInAt ? new Date(member.clockInAt).toLocaleString("en-NG", { timeZone: data.timezone }) : "",
+    member.clockOutAt ? new Date(member.clockOutAt).toLocaleString("en-NG", { timeZone: data.timezone }) : "",
+    member.lateMinutes,
+    member.earlyDepartureMinutes,
+    member.hoursWorkedMinutes === null ? "" : formatDuration(member.hoursWorkedMinutes),
+  ]);
+
+  const csv = [columns, ...rows]
+    .map((row) => row.map(escapeCsv).join(","))
+    .join("\r\n");
+
+  const blob = new Blob(["\\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `staff-attendance-${data.date}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 export default function StaffAttendancePage() {
   const [date, setDate] = useState(today);
   const [search, setSearch] = useState("");
@@ -90,52 +148,49 @@ export default function StaffAttendancePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  async function loadAttendance(selectedDate = date, query = search) {
-    setLoading(true);
-    setError("");
+  const loadAttendance = useCallback(async (selectedDate: string, query: string) => {
+setLoading(true);
+setError("");
 
-    try {
-      const params = new URLSearchParams({
-        date: selectedDate,
-        search: query,
-      });
+try {
+  const params = new URLSearchParams({
+    date: selectedDate,
+    search: query,
+  });
 
-      const response = await fetch(
-        `/api/school/staff-attendance?${params.toString()}`,
-        { cache: "no-store" }
-      );
+  const response = await fetch(
+    `/api/school/staff-attendance?${params.toString()}`,
+    { cache: "no-store" }
+  );
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(
-          result.message || "Unable to load staff attendance."
-        );
-      }
-
-      setData(result);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to load staff attendance."
-      );
-    } finally {
-      setLoading(false);
-    }
+  const result = await response.json();
+  if (!response.ok || !result.success) {
+    throw new Error(
+      result.message || "Unable to load staff attendance."
+    );
   }
 
-  useEffect(() => {
-    loadAttendance();
-  }, []);
+  setData(result);
+} catch (err) {
+  setError(
+    err instanceof Error
+      ? err.message
+      : "Unable to load staff attendance."
+  );
+} finally {
+  setLoading(false);
+}
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadAttendance(date, search);
-    }, 350);
+}, []);
 
-    return () => clearTimeout(timer);
-  }, [date, search]);
+useEffect(() => {
+const timer = setTimeout(() => {
+void loadAttendance(date, search);
+}, 350);
+
+return () => clearTimeout(timer);
+
+}, [date, search, loadAttendance]);
 
   const summary = data?.summary;
 
@@ -164,6 +219,18 @@ export default function StaffAttendancePage() {
         value: summary?.notClockedIn ?? 0,
         icon: XCircle,
         className: "bg-destructive/10 text-destructive",
+      },
+      {
+        label: "Early departures",
+        value: summary?.earlyDepartures ?? 0,
+        icon: Clock3,
+        className: "bg-warning/10 text-warning",
+      },
+      {
+        label: "Hours worked",
+        value: formatDuration(summary?.totalHoursWorkedMinutes ?? null),
+        icon: UserCheck,
+        className: "bg-primary/10 text-primary",
       },
     ],
     [summary]
@@ -205,6 +272,14 @@ export default function StaffAttendancePage() {
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link
+              href="/dashboard/staff-attendance/history"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border bg-card px-4 text-sm font-semibold shadow-sm transition hover:bg-muted"
+            >
+              <History className="h-4 w-4" />
+              Attendance history
+            </Link>
+
+            <Link
               href="/dashboard/staff-attendance/qr"
               className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-hover"
             >
@@ -219,6 +294,16 @@ export default function StaffAttendancePage() {
               <Settings2 className="h-4 w-4" />
               Attendance settings
             </Link>
+
+            <button
+              type="button"
+              onClick={() => data && exportAttendanceCsv(data)}
+              disabled={!data || loading}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border bg-card px-4 text-sm font-semibold shadow-sm transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </button>
           </div>
         </div>
 
@@ -229,7 +314,7 @@ export default function StaffAttendancePage() {
           </div>
         )}
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {stats.map((stat) => {
             const Icon = stat.icon;
 
@@ -310,13 +395,15 @@ export default function StaffAttendancePage() {
                   <th className="px-5 py-4 font-semibold">Clock in</th>
                   <th className="px-5 py-4 font-semibold">Clock out</th>
                   <th className="px-5 py-4 font-semibold">Late</th>
+                  <th className="px-5 py-4 font-semibold">Departure</th>
+                  <th className="px-5 py-4 font-semibold">Hours worked</th>
                 </tr>
               </thead>
 
               <tbody className="divide-y">
                 {loading && !data ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-16">
+                    <td colSpan={8} className="px-5 py-16">
                       <div className="flex items-center justify-center gap-3 text-sm text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin" />
                         Loading attendance...
@@ -402,12 +489,28 @@ export default function StaffAttendancePage() {
                             <span className="text-muted-foreground">—</span>
                           )}
                         </td>
+
+                        <td className="px-5 py-4">
+                          {member.departedEarly ? (
+                            <span className="font-semibold text-warning">
+                              {member.earlyDepartureMinutes} min early
+                            </span>
+                          ) : member.clockOutAt ? (
+                            <span className="text-success">On time or later</span>
+                          ) : (
+                            <span className="text-muted-foreground">Pending</span>
+                          )}
+                        </td>
+
+                        <td className="px-5 py-4 font-medium">
+                          {formatDuration(member.hoursWorkedMinutes)}
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-5 py-16">
+                    <td colSpan={8} className="px-5 py-16">
                       <div className="mx-auto flex max-w-md flex-col items-center text-center">
                         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
                           <Clock3 className="h-6 w-6" />

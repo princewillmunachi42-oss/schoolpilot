@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { hashPassword } from "@/lib/auth/password";
+import { notifySchoolManagement } from "@/lib/notifications/management";
 
 async function getOwnerSchool(userId: string) {
   const result = await pool.query(
@@ -246,6 +247,14 @@ export async function POST(request: NextRequest) {
 
     await client.query("COMMIT");
 
+    await notifySchoolManagement({
+      schoolId: membership.school_id,
+      title: "Staff member added",
+      message: `${firstName} ${lastName} (${staffId}) was added to staff.`,
+      type: "staff",
+      link: "/dashboard/staff",
+    });
+
     return NextResponse.redirect(
       new URL("/dashboard/staff?created=1", request.url)
     );
@@ -464,6 +473,14 @@ export async function PUT(request: NextRequest) {
 
     await client.query("COMMIT");
 
+    await notifySchoolManagement({
+      schoolId: membership.school_id,
+      title: "Staff member updated",
+      message: `${firstName} ${lastName} (${staffId}) was updated.`,
+      type: "staff",
+      link: "/dashboard/staff",
+    });
+
     return NextResponse.json({
       success: true,
       message: "Staff member updated successfully.",
@@ -529,7 +546,7 @@ export async function DELETE(request: NextRequest) {
          updated_at = NOW()
        WHERE id = $1
          AND school_id = $2
-       RETURNING user_id`,
+       RETURNING user_id, staff_id, first_name, last_name`,
       [id, membership.school_id]
     );
 
@@ -554,6 +571,14 @@ export async function DELETE(request: NextRequest) {
     }
 
     await client.query("COMMIT");
+
+    await notifySchoolManagement({
+      schoolId: membership.school_id,
+      title: "Staff member deactivated",
+      message: `${result.rows[0].first_name} ${result.rows[0].last_name} (${result.rows[0].staff_id}) was deactivated.`,
+      type: "staff",
+      link: "/dashboard/staff",
+    });
 
     return NextResponse.json({
       success: true,

@@ -6,6 +6,38 @@ function isValidDate(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
+
+function getLocalMinutes(value: string | Date, timezone: string): number | null {
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: timezone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(new Date(value));
+
+    const hour = Number(parts.find((part) => part.type === "hour")?.value);
+    const minute = Number(parts.find((part) => part.type === "minute")?.value);
+
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+    return hour * 60 + minute;
+  } catch {
+    return null;
+  }
+}
+
+function getScheduledMinutes(value: unknown): number | null {
+  if (typeof value !== "string") return null;
+  const match = value.match(/^(\d{2}):(\d{2})/);
+  if (!match) return null;
+
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour > 23 || minute > 59) return null;
+
+  return hour * 60 + minute;
+}
+
 export async function GET(request: NextRequest) {
   const manager = await getStaffAttendanceManager();
 
@@ -124,7 +156,27 @@ export async function GET(request: NextRequest) {
       [manager.schoolId, attendanceDate, search]
     );
 
-    const staff = result.rows.map((row) => ({
+    const staff = result.rows.map((row) => {
+      const clockInAt = row.clock_in_at ? new Date(row.clock_in_at) : null;
+      const clockOutAt = row.clock_out_at ? new Date(row.clock_out_at) : null;
+      const scheduledClockOut = getScheduledMinutes(settings.clock_out_time);
+      const actualClockOutMinutes =
+        clockOutAt && settings.timezone
+          ? getLocalMinutes(clockOutAt, settings.timezone)
+          : null;
+      const earlyDepartureMinutes =
+        clockOutAt &&
+        scheduledClockOut !== null &&
+        actualClockOutMinutes !== null &&
+        actualClockOutMinutes < scheduledClockOut
+          ? scheduledClockOut - actualClockOutMinutes
+          : 0;
+      const hoursWorkedMinutes =
+        clockInAt && clockOutAt
+          ? Math.max(0, Math.floor((clockOutAt.getTime() - clockInAt.getTime()) / 60000))
+          : null;
+
+      return {
       id: row.id,
       staffId: row.staff_id,
       firstName: row.first_name,
@@ -144,8 +196,12 @@ export async function GET(request: NextRequest) {
       clockOutAt: row.clock_out_at,
       attendanceStatus: row.attendance_status,
       lateMinutes: row.late_minutes ?? 0,
+      earlyDepartureMinutes,
+      departedEarly: earlyDepartureMinutes > 0,
+      hoursWorkedMinutes,
       currentState: row.current_state,
-    }));
+      };
+    });
 
     const summary = {
       totalStaff: staff.length,
@@ -168,6 +224,13 @@ export async function GET(request: NextRequest) {
       completed: staff.filter(
         (member) => member.currentState === "completed"
       ).length,
+      earlyDepartures: staff.filter(
+        (member) => member.departedEarly
+      ).length,
+      totalHoursWorkedMinutes: staff.reduce(
+        (total, member) => total + (member.hoursWorkedMinutes ?? 0),
+        0
+      ),
     };
 
     return NextResponse.json({

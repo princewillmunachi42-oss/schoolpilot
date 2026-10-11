@@ -22,10 +22,12 @@ import {
   Clock3,
 } from "lucide-react";
 
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import MobileDashboardNav from "@/components/MobileDashboardNav";
 import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
+import { getStaffAttendanceManager } from "@/lib/auth/staff-attendance";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -59,6 +61,21 @@ export default async function DashboardPage() {
   }
 
   const schoolId = membership.school_id;
+
+  const manager = await getStaffAttendanceManager();
+  const unreadNotificationsResult = manager
+    ? await pool.query(
+        `SELECT COUNT(*)::int AS count
+         FROM notifications
+         WHERE school_id = $1
+           AND user_id = $2
+           AND is_read = FALSE`,
+        [manager.schoolId, manager.userId]
+      )
+    : null;
+
+  const unreadNotificationCount =
+    unreadNotificationsResult?.rows[0]?.count ?? 0;
 
   const countsResult = await pool.query(
     `SELECT
@@ -276,13 +293,27 @@ export default async function DashboardPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  aria-label="Notifications"
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border bg-card text-muted-foreground shadow-sm transition-all hover:border-primary/20 hover:bg-primary/5 hover:text-primary"
+                <Link
+                  href="/dashboard/notifications"
+                  aria-label={
+                    unreadNotificationCount > 0
+                      ? `Notifications, ${unreadNotificationCount} unread`
+                      : "Notifications"
+                  }
+                  className="relative flex h-10 w-10 items-center justify-center rounded-xl border bg-card text-muted-foreground shadow-sm transition-all hover:border-primary/20 hover:bg-primary/5 hover:text-primary"
                 >
                   <Bell className="h-5 w-5" />
-                </button>
+                  {unreadNotificationCount > 0 && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-background"
+                    >
+                      {unreadNotificationCount > 99
+                        ? "99+"
+                        : unreadNotificationCount}
+                    </span>
+                  )}
+                </Link>
 
                 <details className="relative">
                   <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl border border-transparent p-1.5 transition-all hover:border-border hover:bg-card hover:shadow-sm">
@@ -348,7 +379,7 @@ export default async function DashboardPage() {
                 </h1>
 
                 <p className="mt-2 max-w-2xl text-muted-foreground">
-                  Here's what's happening with your school today.
+                  Here&apos;s what&apos;s happening with your school today.
                 </p>
               </div>
 

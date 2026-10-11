@@ -252,14 +252,18 @@ export async function POST(request: NextRequest) {
       ]
     );
 
-    await notifyParentsAboutStudentEvent({
-      schoolId: teacher.schoolId,
-      studentId,
-      title: `Attendance update: ${status}`,
-      message: `Your child was marked ${status.toLowerCase()} on ${new Date(attendanceDate).toLocaleDateString("en-NG")}.`,
-      type: "attendance",
-      link: "/parent/attendance",
-    });
+    try {
+      await notifyParentsAboutStudentEvent({
+        schoolId: teacher.schoolId,
+        studentId,
+        title: `Attendance update: ${status}`,
+        message: `Your child was marked ${status.toLowerCase()} on ${new Date(attendanceDate).toLocaleDateString("en-NG")}.`,
+        type: "attendance",
+        link: "/parent/attendance",
+      });
+    } catch (notificationError) {
+      console.error("Teacher attendance parent notification failed:", notificationError);
+    }
 
     return NextResponse.json(
       { attendance: result.rows[0] },

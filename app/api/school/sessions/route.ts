@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { processStudentPromotions } from "@/lib/academics/promotion";
+import { notifySchoolManagement } from "@/lib/notifications/management";
 export async function GET() {
   const user = await getCurrentUser();
 
@@ -161,6 +162,16 @@ const newSessionId = newSessionResult.rows[0].id;
       );
     }
     await client.query("COMMIT");
+
+    await notifySchoolManagement({
+      schoolId: membership.school_id,
+      title: "Academic session created",
+      message: isCurrent
+        ? `Academic session "${name}" was created and set as current.`
+        : `Academic session "${name}" was created.`,
+      type: "academic_session",
+      link: "/dashboard/sessions",
+    });
 
     return NextResponse.redirect(
       new URL("/dashboard/sessions?created=1", request.url)
@@ -381,6 +392,16 @@ export async function PUT(request: NextRequest) {
 
     await client.query("COMMIT");
 
+    await notifySchoolManagement({
+      schoolId: membership.school_id,
+      title: "Academic session updated",
+      message: isCurrent
+        ? `Academic session "${name}" was updated and is marked as current.`
+        : `Academic session "${name}" was updated.`,
+      type: "academic_session",
+      link: "/dashboard/sessions",
+    });
+
     return NextResponse.json({
       success: true,
       message: "Academic session updated successfully.",
@@ -454,7 +475,7 @@ export async function DELETE(request: NextRequest) {
       `DELETE FROM academic_sessions
        WHERE id = $1
          AND school_id = $2
-       RETURNING id`,
+       RETURNING id, name`,
       [id, membership.school_id]
     );
 
@@ -467,6 +488,14 @@ export async function DELETE(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    await notifySchoolManagement({
+      schoolId: membership.school_id,
+      title: "Academic session deleted",
+      message: `Academic session "${result.rows[0].name}" was deleted.`,
+      type: "academic_session",
+      link: "/dashboard/sessions",
+    });
 
     return NextResponse.json({
       success: true,

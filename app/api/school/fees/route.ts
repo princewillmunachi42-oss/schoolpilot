@@ -3,6 +3,7 @@ import pool from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { notifyStudentAboutFee } from "@/lib/notifications/fees";
 import { notifyParentsAboutStudentEvent } from "@/lib/notifications/parents";
+import { notifySchoolManagement } from "@/lib/notifications/management";
 
 async function getOwnerSchool(userId: string) {
   const result = await pool.query(
@@ -213,6 +214,14 @@ export async function POST(request: NextRequest) {
 
         const createdFee = result.rows[0];
 
+    await notifySchoolManagement({
+      schoolId,
+      title: `New fee record: ${createdFee.fee_name}`,
+      message: `A fee record was created for student ID ${createdFee.student_id}.`,
+      type: "fee",
+      link: "/dashboard/fees",
+    });
+
     const namesResult = await pool.query(
       `
         SELECT
@@ -385,6 +394,14 @@ export async function PUT(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    await notifySchoolManagement({
+      schoolId,
+      title: `Fee record updated: ${updatedFee.fee_name}`,
+      message: `The fee record for student ID ${updatedFee.student_id} was updated.`,
+      type: "fee",
+      link: "/dashboard/fees",
+    });
 
     const namesResult = await pool.query(
       `

@@ -122,17 +122,24 @@ export async function POST(request: NextRequest) {
     }
 
     const studentCheck = await pool.query(
-      `SELECT id
-       FROM students
-       WHERE id = $1
-         AND school_id = $2
+      `SELECT s.id
+       FROM students s
+       INNER JOIN academic_sessions acs
+         ON acs.id = $2
+        AND acs.school_id = s.school_id
+       INNER JOIN terms t
+         ON t.id = $3
+        AND t.school_id = s.school_id
+        AND t.academic_session_id = acs.id
+       WHERE s.id = $1
+         AND s.school_id = $4
        LIMIT 1`,
-      [student_id, schoolId]
+      [student_id, academic_session_id, term_id, schoolId]
     );
 
     if (!studentCheck.rows[0]) {
       return NextResponse.json(
-        { error: "Student not found" },
+        { error: "Student, academic session, or term not found for this school" },
         { status: 404 }
       );
     }
@@ -167,6 +174,7 @@ export async function POST(request: NextRequest) {
       ]
     );
 
+    try {
       await notifyParentsAboutStudentEvent({
         schoolId,
         studentId: student_id,
@@ -175,6 +183,9 @@ export async function POST(request: NextRequest) {
         type: "attendance",
         link: "/parent/attendance",
       });
+    } catch (notificationError) {
+      console.error("Parent attendance notification failed:", notificationError);
+    }
 
     return NextResponse.json(
       { attendance: result.rows[0] },
