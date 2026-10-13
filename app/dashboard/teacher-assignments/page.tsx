@@ -26,7 +26,7 @@ export default async function TeacherAssignmentsPage() {
      FROM school_members
      WHERE user_id = $1
      LIMIT 1`,
-    [user.id]
+    [user.id],
   );
 
   const membership = membershipResult.rows[0];
@@ -37,6 +37,7 @@ export default async function TeacherAssignmentsPage() {
 
   const [
     staffResult,
+    assignmentStatsResult,
     classesResult,
     subjectsResult,
     classTeachersResult,
@@ -53,7 +54,16 @@ export default async function TeacherAssignmentsPage() {
        WHERE school_id = $1
          AND status = 'active'
        ORDER BY first_name ASC, last_name ASC`,
-      [membership.school_id]
+      [membership.school_id],
+    ),
+    pool.query(
+      `SELECT
+         COUNT(*)::int AS total,
+         COUNT(*) FILTER (WHERE status = 'published')::int AS published,
+         COUNT(*) FILTER (WHERE status = 'draft')::int AS drafts
+       FROM assignments
+       WHERE school_id = $1`,
+      [membership.school_id],
     ),
 
     pool.query(
@@ -64,7 +74,7 @@ export default async function TeacherAssignmentsPage() {
        WHERE school_id = $1
          AND status = 'active'
        ORDER BY name ASC`,
-      [membership.school_id]
+      [membership.school_id],
     ),
 
     pool.query(
@@ -75,7 +85,7 @@ export default async function TeacherAssignmentsPage() {
        FROM subjects
        WHERE school_id = $1
        ORDER BY name ASC`,
-      [membership.school_id]
+      [membership.school_id],
     ),
 
     pool.query(
@@ -91,7 +101,7 @@ export default async function TeacherAssignmentsPage() {
        JOIN classes c ON c.id = ct.class_id
        WHERE ct.school_id = $1
        ORDER BY c.name ASC, st.first_name ASC`,
-      [membership.school_id]
+      [membership.school_id],
     ),
 
     pool.query(
@@ -109,7 +119,7 @@ export default async function TeacherAssignmentsPage() {
        LEFT JOIN classes c ON c.id = ts.class_id
        WHERE ts.school_id = $1
        ORDER BY st.first_name ASC, sub.name ASC`,
-      [membership.school_id]
+      [membership.school_id],
     ),
   ]);
 
@@ -118,6 +128,7 @@ export default async function TeacherAssignmentsPage() {
   const subjects = subjectsResult.rows;
   const classTeachers = classTeachersResult.rows;
   const teacherSubjects = teacherSubjectsResult.rows;
+  const assignmentStats = assignmentStatsResult.rows[0];
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -143,8 +154,8 @@ export default async function TeacherAssignmentsPage() {
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                Assign teachers to classes and subjects, then manage
-                the assignments from one place.
+                Assign teachers to classes and subjects, then manage the
+                assignments from one place.
               </p>
             </div>
 
@@ -168,9 +179,7 @@ export default async function TeacherAssignmentsPage() {
               </span>
             </div>
 
-            <p className="mt-5 text-3xl font-bold">
-              {staff.length}
-            </p>
+            <p className="mt-5 text-3xl font-bold">{staff.length}</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Active teachers
             </p>
@@ -186,12 +195,8 @@ export default async function TeacherAssignmentsPage() {
               </span>
             </div>
 
-            <p className="mt-5 text-3xl font-bold">
-              {classes.length}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Active classes
-            </p>
+            <p className="mt-5 text-3xl font-bold">{classes.length}</p>
+            <p className="mt-1 text-sm text-muted-foreground">Active classes</p>
           </div>
 
           <div className="rounded-2xl border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
@@ -204,9 +209,7 @@ export default async function TeacherAssignmentsPage() {
               </span>
             </div>
 
-            <p className="mt-5 text-3xl font-bold">
-              {subjects.length}
-            </p>
+            <p className="mt-5 text-3xl font-bold">{subjects.length}</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Available subjects
             </p>
@@ -230,7 +233,51 @@ export default async function TeacherAssignmentsPage() {
             </p>
           </div>
         </section>
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">Teacher Workload Overview</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              School-wide teacher mappings and assignment status.
+            </p>
+          </div>
 
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="rounded-2xl border bg-card p-5 shadow-sm">
+              <p className="text-3xl font-bold">{classTeachers.length}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Class mappings
+              </p>
+            </div>
+
+            <div className="rounded-2xl border bg-card p-5 shadow-sm">
+              <p className="text-3xl font-bold">{teacherSubjects.length}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Subject mappings
+              </p>
+            </div>
+
+            <div className="rounded-2xl border bg-card p-5 shadow-sm">
+              <p className="text-3xl font-bold">{assignmentStats.total}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Total assignments
+              </p>
+            </div>
+
+            <div className="rounded-2xl border bg-card p-5 shadow-sm">
+              <p className="text-3xl font-bold">{assignmentStats.published}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Published assignments
+              </p>
+            </div>
+
+            <div className="rounded-2xl border bg-card p-5 shadow-sm">
+              <p className="text-3xl font-bold">{assignmentStats.drafts}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Draft assignments
+              </p>
+            </div>
+          </div>
+        </section>
         <section className="grid gap-6 lg:grid-cols-2">
           <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
             <div className="border-b bg-muted/30 px-5 py-5 sm:px-6">
@@ -244,8 +291,8 @@ export default async function TeacherAssignmentsPage() {
                     Assign Teacher to Class
                   </h2>
                   <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                    Assign a teacher to a class and optionally make
-                    them the primary class teacher.
+                    Assign a teacher to a class and optionally make them the
+                    primary class teacher.
                   </p>
                 </div>
               </div>
@@ -256,11 +303,7 @@ export default async function TeacherAssignmentsPage() {
               method="POST"
               className="space-y-5 p-5 sm:p-6"
             >
-              <input
-                type="hidden"
-                name="assignmentType"
-                value="class"
-              />
+              <input type="hidden" name="assignmentType" value="class" />
 
               <div>
                 <label
@@ -283,11 +326,8 @@ export default async function TeacherAssignmentsPage() {
 
                   {staff.map((member) => (
                     <option key={member.id} value={member.id}>
-                      {member.first_name} {member.last_name} —{" "}
-                      {member.staff_id}
-                      {member.role_title
-                        ? ` (${member.role_title})`
-                        : ""}
+                      {member.first_name} {member.last_name} — {member.staff_id}
+                      {member.role_title ? ` (${member.role_title})` : ""}
                     </option>
                   ))}
                 </select>
@@ -332,8 +372,8 @@ export default async function TeacherAssignmentsPage() {
                     Primary class teacher
                   </span>
                   <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                    Mark this teacher as the primary teacher for
-                    the selected class.
+                    Mark this teacher as the primary teacher for the selected
+                    class.
                   </span>
                 </span>
               </label>
@@ -360,8 +400,7 @@ export default async function TeacherAssignmentsPage() {
                     Assign Teacher to Subject
                   </h2>
                   <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                    Assign a subject generally or limit it to a
-                    specific class.
+                    Assign a subject generally or limit it to a specific class.
                   </p>
                 </div>
               </div>
@@ -372,11 +411,7 @@ export default async function TeacherAssignmentsPage() {
               method="POST"
               className="space-y-5 p-5 sm:p-6"
             >
-              <input
-                type="hidden"
-                name="assignmentType"
-                value="subject"
-              />
+              <input type="hidden" name="assignmentType" value="subject" />
 
               <div>
                 <label
@@ -399,8 +434,7 @@ export default async function TeacherAssignmentsPage() {
 
                   {staff.map((member) => (
                     <option key={member.id} value={member.id}>
-                      {member.first_name} {member.last_name} —{" "}
-                      {member.staff_id}
+                      {member.first_name} {member.last_name} — {member.staff_id}
                     </option>
                   ))}
                 </select>
@@ -426,10 +460,7 @@ export default async function TeacherAssignmentsPage() {
                   </option>
 
                   {subjects.map((subject) => (
-                    <option
-                      key={subject.id}
-                      value={subject.id}
-                    >
+                    <option key={subject.id} value={subject.id}>
                       {subject.name} — {subject.code}
                     </option>
                   ))}
@@ -450,9 +481,7 @@ export default async function TeacherAssignmentsPage() {
                   defaultValue=""
                   className="min-h-11 w-full rounded-xl border bg-background px-3.5 py-2.5 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
                 >
-                  <option value="">
-                    All classes / general assignment
-                  </option>
+                  <option value="">All classes / general assignment</option>
 
                   {classes.map((item) => (
                     <option key={item.id} value={item.id}>
@@ -489,9 +518,7 @@ export default async function TeacherAssignmentsPage() {
 
                 <p className="mt-2 text-sm text-muted-foreground">
                   {classTeachers.length}{" "}
-                  {classTeachers.length === 1
-                    ? "assignment"
-                    : "assignments"}{" "}
+                  {classTeachers.length === 1 ? "assignment" : "assignments"}{" "}
                   currently configured.
                 </p>
               </div>
@@ -514,8 +541,8 @@ export default async function TeacherAssignmentsPage() {
               </h3>
 
               <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-                Use the assignment form above to connect teachers
-                with your active classes.
+                Use the assignment form above to connect teachers with your
+                active classes.
               </p>
             </div>
           ) : (
@@ -528,19 +555,14 @@ export default async function TeacherAssignmentsPage() {
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex min-w-0 items-start gap-3">
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-semibold text-primary">
-                        {assignment.first_name
-                          .charAt(0)
-                          .toUpperCase()}
-                        {assignment.last_name
-                          .charAt(0)
-                          .toUpperCase()}
+                        {assignment.first_name.charAt(0).toUpperCase()}
+                        {assignment.last_name.charAt(0).toUpperCase()}
                       </div>
 
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="font-semibold">
-                            {assignment.first_name}{" "}
-                            {assignment.last_name}
+                            {assignment.first_name} {assignment.last_name}
                           </h3>
 
                           {assignment.is_primary && (
@@ -591,9 +613,7 @@ export default async function TeacherAssignmentsPage() {
 
                 <p className="mt-2 text-sm text-muted-foreground">
                   {teacherSubjects.length}{" "}
-                  {teacherSubjects.length === 1
-                    ? "assignment"
-                    : "assignments"}{" "}
+                  {teacherSubjects.length === 1 ? "assignment" : "assignments"}{" "}
                   currently configured.
                 </p>
               </div>
@@ -611,13 +631,11 @@ export default async function TeacherAssignmentsPage() {
                 <BookMarked className="h-8 w-8" />
               </div>
 
-              <h3 className="mt-4 font-semibold">
-                No subject assignments yet
-              </h3>
+              <h3 className="mt-4 font-semibold">No subject assignments yet</h3>
 
               <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-                Use the subject assignment form above to assign
-                teachers to subjects.
+                Use the subject assignment form above to assign teachers to
+                subjects.
               </p>
             </div>
           ) : (
@@ -630,18 +648,13 @@ export default async function TeacherAssignmentsPage() {
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex min-w-0 items-start gap-3">
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/10 font-semibold text-accent">
-                        {assignment.first_name
-                          .charAt(0)
-                          .toUpperCase()}
-                        {assignment.last_name
-                          .charAt(0)
-                          .toUpperCase()}
+                        {assignment.first_name.charAt(0).toUpperCase()}
+                        {assignment.last_name.charAt(0).toUpperCase()}
                       </div>
 
                       <div className="min-w-0">
                         <h3 className="font-semibold">
-                          {assignment.first_name}{" "}
-                          {assignment.last_name}
+                          {assignment.first_name} {assignment.last_name}
                         </h3>
 
                         <p className="mt-1 text-sm text-muted-foreground">
@@ -651,14 +664,13 @@ export default async function TeacherAssignmentsPage() {
                         <div className="mt-3 flex flex-wrap gap-2">
                           <span className="inline-flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-2 text-sm font-medium text-accent">
                             <BookMarked className="h-4 w-4" />
-                            {assignment.subject_name} (
-                            {assignment.subject_code})
+                            {assignment.subject_name} ({assignment.subject_code}
+                            )
                           </span>
 
                           <span className="inline-flex items-center gap-1.5 rounded-lg bg-muted px-3 py-2 text-sm font-medium">
                             <GraduationCap className="h-4 w-4 text-primary" />
-                            {assignment.class_name ||
-                              "General assignment"}
+                            {assignment.class_name || "General assignment"}
                           </span>
                         </div>
                       </div>

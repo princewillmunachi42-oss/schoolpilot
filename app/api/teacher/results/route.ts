@@ -348,6 +348,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const periodAccess = await pool.query(
+      `SELECT 1
+       FROM academic_sessions a
+       INNER JOIN terms t
+         ON t.academic_session_id = a.id
+        AND t.school_id = a.school_id
+       WHERE a.id = $1
+         AND a.school_id = $3
+         AND t.id = $2
+         AND t.school_id = $3
+       LIMIT 1`,
+      [academicSessionId, termId, teacher.schoolId]
+    );
+
+    if (!periodAccess.rows[0]) {
+      return NextResponse.json(
+        { error: "Invalid academic session or term for this school." },
+        { status: 400 }
+      );
+    }
+
     const result = await pool.query(
       `INSERT INTO results (
          school_id,
@@ -528,6 +549,13 @@ export async function PUT(request: NextRequest) {
        INNER JOIN students s
          ON s.id = r.student_id
         AND s.school_id = r.school_id
+       INNER JOIN academic_sessions a
+         ON a.id = r.academic_session_id
+        AND a.school_id = r.school_id
+       INNER JOIN terms t
+         ON t.id = r.term_id
+        AND t.school_id = r.school_id
+        AND t.academic_session_id = r.academic_session_id
        INNER JOIN class_teachers ct
          ON ct.class_id = s.class_id
         AND ct.school_id = s.school_id

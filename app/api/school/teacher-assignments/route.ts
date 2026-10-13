@@ -79,58 +79,53 @@ export async function POST(request: NextRequest) {
     if (assignmentType === "class") {
       if (!classId) {
         return NextResponse.json(
-          {
-            success: false,
-            message: "Class is required.",
-          },
+          { success: false, message: "Class is required." },
           { status: 400 }
         );
       }
 
-      const classResult = await pool.query(
-        `SELECT id
-         FROM classes
-         WHERE id = $1
-           AND school_id = $2
-         LIMIT 1`,
-        [classId, membership.school_id]
-      );
+      const client = await pool.connect();
 
-      if (classResult.rowCount === 0) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Class does not belong to your school.",
-          },
-          { status: 400 }
-        );
-      }
+      try {
+        await client.query("BEGIN");
 
-      if (isPrimary) {
-        await pool.query(
-          `UPDATE class_teachers
-           SET is_primary = false
-           WHERE class_id = $1
-             AND school_id = $2`,
+        const lockedClass = await client.query(
+          `SELECT id FROM classes
+           WHERE id = $1 AND school_id = $2
+           FOR UPDATE`,
           [classId, membership.school_id]
         );
-      }
 
-      await pool.query(
-        `INSERT INTO class_teachers (
-          school_id,
-          class_id,
-          staff_id,
-          is_primary
-        )
-        VALUES ($1, $2, $3, $4)`,
-        [
-          membership.school_id,
-          classId,
-          staffId,
-          isPrimary,
-        ]
-      );
+        if (lockedClass.rowCount === 0) {
+          await client.query("ROLLBACK");
+          return NextResponse.json(
+            { success: false, message: "Class does not belong to your school." },
+            { status: 400 }
+          );
+        }
+
+        if (isPrimary) {
+          await client.query(
+            `UPDATE class_teachers
+             SET is_primary = false
+             WHERE class_id = $1 AND school_id = $2`,
+            [classId, membership.school_id]
+          );
+        }
+
+        await client.query(
+          `INSERT INTO class_teachers (school_id, class_id, staff_id, is_primary)
+           VALUES ($1, $2, $3, $4)`,
+          [membership.school_id, classId, staffId, isPrimary]
+        );
+
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        throw error;
+      } finally {
+        client.release();
+      }
     }
 
     if (assignmentType === "subject") {
@@ -200,8 +195,8 @@ export async function POST(request: NextRequest) {
         ]
       );
     }
-  } catch (error: any) {
-    if (error?.code === "23505") {
+  } catch (error: unknown) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
       return NextResponse.json(
         {
           success: false,
@@ -316,83 +311,73 @@ export async function PUT(request: NextRequest) {
     if (assignmentType === "class") {
       if (!classId) {
         return NextResponse.json(
-          {
-            success: false,
-            message: "Class is required.",
-          },
+          { success: false, message: "Class is required." },
           { status: 400 }
         );
       }
 
-      const classResult = await pool.query(
-        `SELECT id
-         FROM classes
-         WHERE id = $1
-           AND school_id = $2
-         LIMIT 1`,
-        [classId, membership.school_id]
-      );
+      const client = await pool.connect();
 
-      if (classResult.rowCount === 0) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Class does not belong to your school.",
-          },
-          { status: 400 }
+      try {
+        await client.query("BEGIN");
+
+        const existing = await client.query(
+          `SELECT id, class_id FROM class_teachers
+           WHERE id = $1 AND school_id = $2
+           FOR UPDATE`,
+          [id, membership.school_id]
         );
-      }
 
-      const existing = await pool.query(
-        `SELECT id
-         FROM class_teachers
-         WHERE id = $1
-           AND school_id = $2
-         LIMIT 1`,
-        [id, membership.school_id]
-      );
+        if (existing.rowCount === 0) {
+          await client.query("ROLLBACK");
+          return NextResponse.json(
+            { success: false, message: "Class teacher assignment not found." },
+            { status: 404 }
+          );
+        }
 
-      if (existing.rowCount === 0) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Class teacher assignment not found.",
-          },
-          { status: 404 }
+        const oldClassId = String(existing.rows[0].class_id);
+        const classIdsToLock = [...new Set([oldClassId, classId])].sort();
+
+        const lockedClasses = await client.query(
+          `SELECT id FROM classes
+           WHERE school_id = $1 AND id = ANY($2::uuid[])
+           ORDER BY id
+           FOR UPDATE`,
+          [membership.school_id, classIdsToLock]
         );
-      }
 
-      if (isPrimary) {
-        await pool.query(
+        if (lockedClasses.rowCount !== classIdsToLock.length) {
+          await client.query("ROLLBACK");
+          return NextResponse.json(
+            { success: false, message: "Class does not belong to your school." },
+            { status: 400 }
+          );
+        }
+
+        if (isPrimary) {
+          await client.query(
+            `UPDATE class_teachers
+             SET is_primary = false
+             WHERE class_id = $1 AND school_id = $2 AND id <> $3`,
+            [classId, membership.school_id, id]
+          );
+        }
+
+        await client.query(
           `UPDATE class_teachers
-           SET is_primary = false
-           WHERE class_id = $1
-             AND school_id = $2
-             AND id <> $3`,
-          [
-            classId,
-            membership.school_id,
-            id,
-          ]
+           SET staff_id = $1, class_id = $2, is_primary = $3
+           WHERE id = $4 AND school_id = $5`,
+          [staffId, classId, isPrimary, id, membership.school_id]
         );
-      }
 
-      await pool.query(
-        `UPDATE class_teachers
-         SET
-           staff_id = $1,
-           class_id = $2,
-           is_primary = $3
-         WHERE id = $4
-           AND school_id = $5`,
-        [
-          staffId,
-          classId,
-          isPrimary,
-          id,
-          membership.school_id,
-        ]
-      );
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK").catch(() => {});
+        throw error;
+      } finally {
+        client.release();
+      }
     }
 
     if (assignmentType === "subject") {
@@ -487,8 +472,8 @@ export async function PUT(request: NextRequest) {
       success: true,
       message: "Teacher assignment updated successfully.",
     });
-  } catch (error: any) {
-    if (error?.code === "23505") {
+  } catch (error: unknown) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
       return NextResponse.json(
         {
           success: false,
