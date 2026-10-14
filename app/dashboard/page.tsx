@@ -1,6 +1,7 @@
 import {
   Bell,
   BookOpen,
+  BarChart3,
   Building2,
   CalendarDays,
   ChevronDown,
@@ -47,12 +48,12 @@ export default async function DashboardPage() {
      WHERE sm.user_id = $1
      ORDER BY s.name
      LIMIT 1`,
-    [user.id]
+    [user.id],
   );
 
   const membership = membershipResult.rows[0];
 
-    if (!membership) {
+  if (!membership) {
     redirect("/login");
   }
 
@@ -70,7 +71,7 @@ export default async function DashboardPage() {
          WHERE school_id = $1
            AND user_id = $2
            AND is_read = FALSE`,
-        [manager.schoolId, manager.userId]
+        [manager.schoolId, manager.userId],
       )
     : null;
 
@@ -83,7 +84,7 @@ export default async function DashboardPage() {
        (SELECT COUNT(*) FROM staff WHERE school_id = $1) AS staff,
        (SELECT COUNT(*) FROM classes WHERE school_id = $1) AS classes,
        (SELECT COUNT(*) FROM subjects WHERE school_id = $1) AS subjects`,
-    [schoolId]
+    [schoolId],
   );
 
   const counts = countsResult.rows[0];
@@ -100,37 +101,37 @@ export default async function DashboardPage() {
      WHERE ac.school_id = $1
        AND ac.is_current = true
      LIMIT 1`,
-    [schoolId]
+    [schoolId],
   );
 
   const academic = academicResult.rows[0];
 
   const statCards = [
-  {
-    label: "Students",
-    value: counts.students,
-    href: "/dashboard/students",
-    icon: GraduationCap,
-  },
-  {
-    label: "Staff",
-    value: counts.staff,
-    href: "/dashboard/staff",
-    icon: Users,
-  },
-  {
-    label: "Classes",
-    value: counts.classes,
-    href: "/dashboard/classes",
-    icon: School,
-  },
-  {
-    label: "Subjects",
-    value: counts.subjects,
-    href: "/dashboard/subjects",
-    icon: BookOpen,
-  },
-];
+    {
+      label: "Students",
+      value: counts.students,
+      href: "/dashboard/students",
+      icon: GraduationCap,
+    },
+    {
+      label: "Staff",
+      value: counts.staff,
+      href: "/dashboard/staff",
+      icon: Users,
+    },
+    {
+      label: "Classes",
+      value: counts.classes,
+      href: "/dashboard/classes",
+      icon: School,
+    },
+    {
+      label: "Subjects",
+      value: counts.subjects,
+      href: "/dashboard/subjects",
+      icon: BookOpen,
+    },
+  ];
 
   const navigationGroups: {
     label: string;
@@ -144,18 +145,42 @@ export default async function DashboardPage() {
     {
       label: "Overview",
       items: [
-        { label: "Overview", href: "/dashboard", icon: LayoutDashboard, active: true },
+        {
+          label: "Overview",
+          href: "/dashboard",
+          icon: LayoutDashboard,
+          active: true,
+        },
       ],
     },
     {
       label: "Academic",
       items: [
-        { label: "Academic Sessions", href: "/dashboard/sessions", icon: CalendarDays },
+        {
+          label: "Academic Sessions",
+          href: "/dashboard/sessions",
+          icon: CalendarDays,
+        },
         { label: "Terms", href: "/dashboard/terms", icon: BookOpen },
         { label: "Classes", href: "/dashboard/classes", icon: GraduationCap },
+
+        {
+          label: "Advanced Report Cards",
+          href: "/dashboard/report-cards",
+          icon: ClipboardList,
+        },
+        {
+          label: "Weekly Reports",
+          href: "/dashboard/weekly-reports",
+          icon: BarChart3,
+        },
         { label: "Subjects", href: "/dashboard/subjects", icon: BookMarked },
         { label: "Timetable", href: "/dashboard/timetable", icon: Clock3 },
-        { label: "Timetable Periods", href: "/dashboard/timetable-periods", icon: CalendarDays },
+        {
+          label: "Timetable Periods",
+          href: "/dashboard/timetable-periods",
+          icon: CalendarDays,
+        },
       ],
     },
     {
@@ -164,24 +189,61 @@ export default async function DashboardPage() {
         { label: "Staff", href: "/dashboard/staff", icon: Users },
         { label: "Students", href: "/dashboard/students", icon: GraduationCap },
         { label: "Parents", href: "/dashboard/parents", icon: UserRound },
-        { label: "Student Promotions", href: "/dashboard/promotions", icon: ArrowUpDown },
-        { label: "Class Progressions", href: "/dashboard/class-progressions", icon: ArrowUpDown },
+        {
+          label: "Student Promotions",
+          href: "/dashboard/promotions",
+          icon: ArrowUpDown,
+        },
+        {
+          label: "Class Progressions",
+          href: "/dashboard/class-progressions",
+          icon: ArrowUpDown,
+        },
       ],
     },
     {
       label: "Attendance",
       items: [
-        { label: "Staff Attendance", href: "/dashboard/staff-attendance", icon: ClipboardCheck },
+        {
+          label: "Staff Attendance",
+          href: "/dashboard/staff-attendance",
+          icon: ClipboardCheck,
+        },
       ],
     },
     {
       label: "Operations",
       items: [
-        { label: "Teacher Assignments", href: "/dashboard/teacher-assignments", icon: ClipboardList },
-        { label: "Student Fees", href: "/dashboard/fees", icon: CircleDollarSign },
-        { label: "Announcements", href: "/dashboard/announcements", icon: Megaphone },
-        { label: "Communications", href: "/dashboard/communications", icon: MessageSquare },
-        { label: "School Settings", href: "/dashboard/settings", icon: Settings },
+        {
+          label: "Teacher Assignments",
+          href: "/dashboard/teacher-assignments",
+          icon: ClipboardList,
+        },
+        {
+          label: "Teacher Tasks",
+          href: "/dashboard/tasks",
+          icon: ClipboardList,
+        },
+        {
+          label: "Student Fees",
+          href: "/dashboard/fees",
+          icon: CircleDollarSign,
+        },
+        {
+          label: "Announcements",
+          href: "/dashboard/announcements",
+          icon: Megaphone,
+        },
+        {
+          label: "Communications",
+          href: "/dashboard/communications",
+          icon: MessageSquare,
+        },
+        {
+          label: "School Settings",
+          href: "/dashboard/settings",
+          icon: Settings,
+        },
       ],
     },
   ];
@@ -239,7 +301,7 @@ export default async function DashboardPage() {
                         key={item.label}
                         href={item.href}
                         className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-                          item.active ?? false
+                          (item.active ?? false)
                             ? "bg-primary text-white shadow-sm"
                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         }`}
@@ -577,43 +639,43 @@ export default async function DashboardPage() {
                   </a>
                 </div>
               </div>
+            </div>
 
-              </div>
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-secondary p-6 text-white shadow-lg shadow-primary/10 sm:p-7">
+              <div className="relative">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
+                  <CalendarDays className="h-5 w-5" />
+                </div>
 
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-secondary p-6 text-white shadow-lg shadow-primary/10 sm:p-7">
-                <div className="relative">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
-                    <CalendarDays className="h-5 w-5" />
-                  </div>
+                <p className="mt-5 text-sm font-medium text-white/70">
+                  Academic session
+                </p>
 
-                  <p className="mt-5 text-sm font-medium text-white/70">
-                    Academic session
+                <h2 className="mt-2 text-2xl font-bold">
+                  {academic?.session_name ?? "Not configured"}
+                </h2>
+
+                <div className="mt-4 rounded-2xl border border-white/15 bg-white/10 p-4">
+                  <p className="text-xs font-medium text-white/60">
+                    Current term
                   </p>
 
-                  <h2 className="mt-2 text-2xl font-bold">
-                    {academic?.session_name ?? "Not configured"}
-                  </h2>
-
-                  <div className="mt-4 rounded-2xl border border-white/15 bg-white/10 p-4">
-                    <p className="text-xs font-medium text-white/60">
-                      Current term
-                    </p>
-
-                    <p className="mt-1 text-sm font-semibold text-white">
-                      {academic?.term_name ?? "Not configured"}
-                    </p>
-                  </div>
-
-                  <a
-                    href="/dashboard/sessions"
-                    className="mt-5 inline-flex items-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-primary shadow-sm transition-all hover:-translate-y-0.5 hover:bg-white/90"
-                  >
-                    {academic?.session_name ? "Manage academics" : "Configure academics"}
-                    <span className="ml-1.5">→</span>
-                  </a>
+                  <p className="mt-1 text-sm font-semibold text-white">
+                    {academic?.term_name ?? "Not configured"}
+                  </p>
                 </div>
-              </div>
 
+                <a
+                  href="/dashboard/sessions"
+                  className="mt-5 inline-flex items-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-primary shadow-sm transition-all hover:-translate-y-0.5 hover:bg-white/90"
+                >
+                  {academic?.session_name
+                    ? "Manage academics"
+                    : "Configure academics"}
+                  <span className="ml-1.5">→</span>
+                </a>
+              </div>
+            </div>
           </section>
         </div>
       </div>

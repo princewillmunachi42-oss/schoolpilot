@@ -1,22 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
+import {
+  DEFAULT_GRADING_SCALE,
+  validateGradingScale,
+  calculateGrade,
+} from "@/lib/academics/grading";
 import { getCurrentTeacher } from "@/lib/auth/teacher";
 import { notifyParentsAboutStudentEvent } from "@/lib/notifications/parents";
 import { notifyStudentAboutResult } from "@/lib/notifications/results";
 
-const VALID_GRADES = [
-  "A",
-  "B",
-  "C",
-  "D",
-  "E",
-  "F",
-];
+async function getSchoolGradingScale(schoolId: string) {
+  const result = await pool.query(
+    "SELECT grading_scale FROM school_grading_scales WHERE school_id = $1 LIMIT 1",
+    [schoolId],
+  );
+  return result.rows[0]
+    ? validateGradingScale(result.rows[0].grading_scale)
+    : DEFAULT_GRADING_SCALE;
+}
 
 async function teacherCanAccessStudent(
   schoolId: string,
   staffId: string,
-  studentId: string
+  studentId: string,
 ) {
   const result = await pool.query(
     `SELECT 1
@@ -29,7 +35,7 @@ async function teacherCanAccessStudent(
        AND s.school_id = $3
        AND s.status = 'active'
      LIMIT 1`,
-    [studentId, staffId, schoolId]
+    [studentId, staffId, schoolId],
   );
 
   return result.rows.length > 0;
@@ -39,7 +45,7 @@ async function teacherCanAccessSubject(
   schoolId: string,
   staffId: string,
   subjectId: string,
-  classId: string
+  classId: string,
 ) {
   const result = await pool.query(
     `SELECT 1
@@ -52,7 +58,7 @@ async function teacherCanAccessSubject(
          OR ts.class_id IS NULL
        )
      LIMIT 1`,
-    [schoolId, staffId, subjectId, classId]
+    [schoolId, staffId, subjectId, classId],
   );
 
   return result.rows.length > 0;
@@ -65,7 +71,7 @@ async function getCurrentSessionAndTerm(schoolId: string) {
      WHERE school_id = $1
        AND is_current = TRUE
      LIMIT 1`,
-    [schoolId]
+    [schoolId],
   );
 
   const session = sessionResult.rows[0];
@@ -81,7 +87,7 @@ async function getCurrentSessionAndTerm(schoolId: string) {
        AND academic_session_id = $2
        AND is_current = TRUE
      LIMIT 1`,
-    [schoolId, session.id]
+    [schoolId, session.id],
   );
 
   const term = termResult.rows[0];
@@ -98,22 +104,17 @@ export async function GET(request: NextRequest) {
     const teacher = await getCurrentTeacher();
 
     if (!teacher) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const classId =
-      request.nextUrl.searchParams.get("class_id") || "";
+    const classId = request.nextUrl.searchParams.get("class_id") || "";
 
-    const subjectId =
-      request.nextUrl.searchParams.get("subject_id") || "";
+    const subjectId = request.nextUrl.searchParams.get("subject_id") || "";
 
     if (!classId || !subjectId) {
       return NextResponse.json(
         { error: "class_id and subject_id are required." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -128,13 +129,13 @@ export async function GET(request: NextRequest) {
          AND c.school_id = $1
          AND c.status = 'active'
        LIMIT 1`,
-      [teacher.schoolId, teacher.staffId, classId]
+      [teacher.schoolId, teacher.staffId, classId],
     );
 
     if (!classAccess.rows[0]) {
       return NextResponse.json(
         { error: "You are not assigned to this class." },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -142,24 +143,22 @@ export async function GET(request: NextRequest) {
       teacher.schoolId,
       teacher.staffId,
       subjectId,
-      classId
+      classId,
     );
 
     if (!subjectAccess) {
       return NextResponse.json(
         { error: "You are not assigned to this subject for this class." },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
-    const current = await getCurrentSessionAndTerm(
-      teacher.schoolId
-    );
+    const current = await getCurrentSessionAndTerm(teacher.schoolId);
 
     if (!current) {
       return NextResponse.json(
         { error: "Current academic session or term is not configured." },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -198,21 +197,24 @@ export async function GET(request: NextRequest) {
         current.session.id,
         current.term.id,
         subjectId,
-      ]
+      ],
     );
+
+    const gradingScale = await getSchoolGradingScale(teacher.schoolId);
 
     return NextResponse.json({
       session: current.session,
       term: current.term,
       class: classAccess.rows[0],
       results: result.rows,
+      grading_scale: gradingScale,
     });
   } catch (error) {
     console.error("Teacher results GET error:", error);
 
     return NextResponse.json(
       { error: "Failed to load results." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -222,51 +224,31 @@ export async function POST(request: NextRequest) {
     const teacher = await getCurrentTeacher();
 
     if (!teacher) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
 
     const studentId =
-      typeof body.student_id === "string"
-        ? body.student_id
-        : "";
+      typeof body.student_id === "string" ? body.student_id : "";
 
     const subjectId =
-      typeof body.subject_id === "string"
-        ? body.subject_id
-        : "";
+      typeof body.subject_id === "string" ? body.subject_id : "";
 
     const academicSessionId =
       typeof body.academic_session_id === "string"
         ? body.academic_session_id
         : "";
 
-    const termId =
-      typeof body.term_id === "string"
-        ? body.term_id
-        : "";
+    const termId = typeof body.term_id === "string" ? body.term_id : "";
 
-    const classId =
-      typeof body.class_id === "string"
-        ? body.class_id
-        : "";
+    const classId = typeof body.class_id === "string" ? body.class_id : "";
 
     const ca = Number(body.ca_score);
     const exam = Number(body.exam_score);
 
-    const grade =
-      typeof body.grade === "string"
-        ? body.grade.trim().toUpperCase()
-        : null;
-
     const remarks =
-      typeof body.remarks === "string"
-        ? body.remarks.trim()
-        : null;
+      typeof body.remarks === "string" ? body.remarks.trim() : null;
 
     if (
       !studentId ||
@@ -279,7 +261,7 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "Missing required result fields." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -293,14 +275,7 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "CA score must be 0-40 and exam score must be 0-60." },
-        { status: 400 }
-      );
-    }
-
-    if (grade && !VALID_GRADES.includes(grade)) {
-      return NextResponse.json(
-        { error: "Invalid grade." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -311,26 +286,26 @@ export async function POST(request: NextRequest) {
          AND staff_id = $2
          AND class_id = $3
        LIMIT 1`,
-      [teacher.schoolId, teacher.staffId, classId]
+      [teacher.schoolId, teacher.staffId, classId],
     );
 
     if (!classAccess.rows[0]) {
       return NextResponse.json(
         { error: "You are not assigned to this class." },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     const studentAccess = await teacherCanAccessStudent(
       teacher.schoolId,
       teacher.staffId,
-      studentId
+      studentId,
     );
 
     if (!studentAccess) {
       return NextResponse.json(
         { error: "You are not authorized to enter this student's result." },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -338,13 +313,13 @@ export async function POST(request: NextRequest) {
       teacher.schoolId,
       teacher.staffId,
       subjectId,
-      classId
+      classId,
     );
 
     if (!subjectAccess) {
       return NextResponse.json(
         { error: "You are not assigned to this subject for this class." },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -359,15 +334,18 @@ export async function POST(request: NextRequest) {
          AND t.id = $2
          AND t.school_id = $3
        LIMIT 1`,
-      [academicSessionId, termId, teacher.schoolId]
+      [academicSessionId, termId, teacher.schoolId],
     );
 
     if (!periodAccess.rows[0]) {
       return NextResponse.json(
         { error: "Invalid academic session or term for this school." },
-        { status: 400 }
+        { status: 400 },
       );
     }
+
+    const gradingScale = await getSchoolGradingScale(teacher.schoolId);
+    const grade = calculateGrade(ca + exam, gradingScale).grade;
 
     const result = await pool.query(
       `INSERT INTO results (
@@ -403,7 +381,7 @@ export async function POST(request: NextRequest) {
         exam,
         grade,
         remarks,
-      ]
+      ],
     );
 
     const createdResult = result.rows[0];
@@ -423,12 +401,7 @@ export async function POST(request: NextRequest) {
        WHERE s.id = $4
          AND s.school_id = $2
        LIMIT 1`,
-      [
-        academicSessionId,
-        teacher.schoolId,
-        termId,
-        subjectId,
-      ]
+      [academicSessionId, teacher.schoolId, termId, subjectId],
     );
 
     const names = namesResult.rows[0];
@@ -453,10 +426,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return NextResponse.json(
-      { result: createdResult },
-      { status: 201 }
-    );
+    return NextResponse.json({ result: createdResult }, { status: 201 });
   } catch (error: unknown) {
     const pgError = error as { code?: string };
 
@@ -466,7 +436,7 @@ export async function POST(request: NextRequest) {
           error:
             "A result already exists for this student, subject, session and term.",
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -474,7 +444,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { error: "Failed to create result." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -484,31 +454,18 @@ export async function PUT(request: NextRequest) {
     const teacher = await getCurrentTeacher();
 
     if (!teacher) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
 
-    const resultId =
-      typeof body.result_id === "string"
-        ? body.result_id
-        : "";
+    const resultId = typeof body.result_id === "string" ? body.result_id : "";
 
     const ca = Number(body.ca_score);
     const exam = Number(body.exam_score);
 
-    const grade =
-      typeof body.grade === "string"
-        ? body.grade.trim().toUpperCase()
-        : null;
-
     const remarks =
-      typeof body.remarks === "string"
-        ? body.remarks.trim()
-        : null;
+      typeof body.remarks === "string" ? body.remarks.trim() : null;
 
     if (
       !resultId ||
@@ -517,7 +474,7 @@ export async function PUT(request: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "Result ID, CA score and exam score are required." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -531,14 +488,7 @@ export async function PUT(request: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "CA score must be 0-40 and exam score must be 0-60." },
-        { status: 400 }
-      );
-    }
-
-    if (grade && !VALID_GRADES.includes(grade)) {
-      return NextResponse.json(
-        { error: "Invalid grade." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -571,15 +521,18 @@ export async function PUT(request: NextRequest) {
        WHERE r.id = $1
          AND r.school_id = $3
        LIMIT 1`,
-      [resultId, teacher.staffId, teacher.schoolId]
+      [resultId, teacher.staffId, teacher.schoolId],
     );
 
     if (!access.rows[0]) {
       return NextResponse.json(
         { error: "You are not authorized to edit this result." },
-        { status: 403 }
+        { status: 403 },
       );
     }
+
+    const gradingScale = await getSchoolGradingScale(teacher.schoolId);
+    const grade = calculateGrade(ca + exam, gradingScale).grade;
 
     const result = await pool.query(
       `UPDATE results
@@ -601,14 +554,7 @@ export async function PUT(request: NextRequest) {
          academic_session_id,
          term_id,
          subject_id`,
-      [
-        resultId,
-        ca,
-        exam,
-        grade,
-        remarks,
-        teacher.schoolId,
-      ]
+      [resultId, ca, exam, grade, remarks, teacher.schoolId],
     );
 
     return NextResponse.json({
@@ -619,7 +565,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(
       { error: "Failed to update result." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

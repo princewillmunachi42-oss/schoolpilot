@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import PublishedReportCards from "@/components/parent/PublishedReportCards";
 import {
   ArrowLeft,
   Award,
@@ -473,6 +474,8 @@ export default function ParentResultsPage() {
                 </p>
               </div>
             </section>
+
+            <PublishedReportCards studentId={studentId} sessionId={sessionId} termId={termId} />
 
             {data?.results.length === 0 ? (
               <section className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--card)] p-10 text-center shadow-sm">

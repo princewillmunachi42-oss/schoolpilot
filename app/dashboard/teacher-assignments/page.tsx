@@ -123,6 +123,49 @@ export default async function TeacherAssignmentsPage() {
     ),
   ]);
 
+  const workloadResult = await pool.query(
+    `SELECT
+       st.id,
+       st.staff_id,
+       st.first_name,
+       st.last_name,
+       COUNT(te.id) FILTER (
+         WHERE tp.id IS NOT NULL AND tp.is_break = FALSE
+       )::int AS weekly_lessons,
+       COUNT(DISTINCT te.class_id) FILTER (
+         WHERE tp.id IS NOT NULL AND tp.is_break = FALSE
+       )::int AS scheduled_classes,
+       COUNT(DISTINCT te.subject_id) FILTER (
+         WHERE tp.id IS NOT NULL AND tp.is_break = FALSE
+       )::int AS scheduled_subjects,
+       COALESCE(
+         SUM(
+           GREATEST(
+             EXTRACT(EPOCH FROM (tp.end_time - tp.start_time)) / 60,
+             0
+           )
+         ) FILTER (
+           WHERE tp.id IS NOT NULL AND tp.is_break = FALSE
+         ),
+         0
+       )::int AS scheduled_minutes
+     FROM staff st
+     LEFT JOIN timetable_entries te
+       ON te.staff_id = st.id
+      AND te.school_id = st.school_id
+      AND te.is_active = TRUE
+     LEFT JOIN timetable_periods tp
+       ON tp.id = te.period_id
+      AND tp.school_id = te.school_id
+     WHERE st.school_id = $1
+       AND st.status = 'active'
+     GROUP BY st.id, st.staff_id, st.first_name, st.last_name
+     ORDER BY weekly_lessons DESC, st.first_name ASC, st.last_name ASC`,
+    [membership.school_id],
+  );
+
+  const workload = workloadResult.rows;
+
   const staff = staffResult.rows;
   const classes = classesResult.rows;
   const subjects = subjectsResult.rows;
@@ -278,6 +321,75 @@ export default async function TeacherAssignmentsPage() {
             </div>
           </div>
         </section>
+
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">
+              Scheduled Teaching Workload
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Actual active timetable lessons for each teacher. Break periods
+              are excluded.
+            </p>
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+            {workload.length === 0 ? (
+              <p className="p-6 text-sm text-muted-foreground">
+                No active teachers are available.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px] text-left text-sm">
+                  <thead className="border-b bg-muted/30 text-muted-foreground">
+                    <tr>
+                      <th className="px-5 py-3 font-medium">Teacher</th>
+                      <th className="px-4 py-3 font-medium">Staff ID</th>
+                      <th className="px-4 py-3 text-right font-medium">
+                        Lessons / week
+                      </th>
+                      <th className="px-4 py-3 text-right font-medium">
+                        Classes
+                      </th>
+                      <th className="px-4 py-3 text-right font-medium">
+                        Subjects
+                      </th>
+                      <th className="px-5 py-3 text-right font-medium">
+                        Teaching time
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {workload.map((teacher) => (
+                      <tr key={teacher.id} className="hover:bg-muted/20">
+                        <td className="px-5 py-4 font-medium">
+                          {teacher.first_name} {teacher.last_name}
+                        </td>
+                        <td className="px-4 py-4 text-muted-foreground">
+                          {teacher.staff_id}
+                        </td>
+                        <td className="px-4 py-4 text-right font-semibold">
+                          {teacher.weekly_lessons}
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          {teacher.scheduled_classes}
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          {teacher.scheduled_subjects}
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          {Math.floor(teacher.scheduled_minutes / 60)}h{" "}
+                          {teacher.scheduled_minutes % 60}m
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </section>
+
         <section className="grid gap-6 lg:grid-cols-2">
           <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
             <div className="border-b bg-muted/30 px-5 py-5 sm:px-6">

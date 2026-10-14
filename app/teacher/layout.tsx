@@ -118,6 +118,13 @@ export default async function TeacherLayout({
 </Link>  
           
             <Link
+              href="/teacher/tasks"
+              className="block rounded-xl px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              Tasks
+            </Link>
+
+            <Link
               href="/teacher/results"
               className="block rounded-xl px-4 py-3 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
             >
@@ -263,6 +270,13 @@ export default async function TeacherLayout({
   Scan QR
 </Link>
               
+                <Link
+                  href="/teacher/tasks"
+                  className="rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted"
+                >
+                  Tasks
+                </Link>
+
                 <Link
                   href="/teacher/results"
                   className="rounded-lg px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted"

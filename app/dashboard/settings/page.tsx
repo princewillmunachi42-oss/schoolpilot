@@ -30,7 +30,7 @@ export default async function SchoolSettingsPage() {
      WHERE sm.user_id = $1
      ORDER BY s.name
      LIMIT 1`,
-    [user.id]
+    [user.id],
   );
 
   const membership = result.rows[0];
@@ -113,9 +113,36 @@ export default async function SchoolSettingsPage() {
               Access Level
             </p>
 
-            <p className="mt-1 font-semibold capitalize">
-              {membership.role}
-            </p>
+            <p className="mt-1 font-semibold capitalize">{membership.role}</p>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border bg-card p-5 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-semibold">Academic Grading Scale</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Configure grade thresholds and remarks for your school.
+              </p>
+            </div>
+            <Link
+              href="/dashboard/settings/grading-scale"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground hover:opacity-90"
+            >
+              Configure grading scale
+            </Link>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border bg-card p-5 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-semibold">Weekly Report Automation</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Configure reporting days, delivery time and notification recipients.</p>
+            </div>
+            <Link href="/dashboard/settings/weekly-reports" className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground hover:opacity-90">
+              Configure weekly reports
+            </Link>
           </div>
         </section>
 
@@ -128,13 +155,10 @@ export default async function SchoolSettingsPage() {
               </div>
 
               <div>
-                <h2 className="font-semibold">
-                  School Information
-                </h2>
+                <h2 className="font-semibold">School Information</h2>
 
                 <p className="text-sm text-muted-foreground">
-                  Update the information displayed across your school
-                  system.
+                  Update the information displayed across your school system.
                 </p>
               </div>
             </div>
@@ -199,9 +223,7 @@ export default async function SchoolSettingsPage() {
                 </div>
 
                 <div className="min-w-0">
-                  <h3 className="font-semibold">
-                    Account Information
-                  </h3>
+                  <h3 className="font-semibold">Account Information</h3>
 
                   <p className="mt-1 text-sm text-muted-foreground">
                     Your current school membership details.
@@ -237,14 +259,11 @@ export default async function SchoolSettingsPage() {
               <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
 
               <div>
-                <p className="text-sm font-semibold">
-                  School-level settings
-                </p>
+                <p className="text-sm font-semibold">School-level settings</p>
 
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Changes made here apply to your school's information.
-                  Your account role and access permissions are managed
-                  separately.
+                  Changes made here apply to your school's information. Your
+                  account role and access permissions are managed separately.
                 </p>
               </div>
             </div>

@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ClipboardCheck,
+  ClipboardList,
   GraduationCap,
   LayoutDashboard,
   Megaphone,
@@ -32,7 +33,7 @@ export default async function TeacherDashboardPage() {
       WHERE id = $1
       LIMIT 1
     `,
-    [teacher.schoolId]
+    [teacher.schoolId],
   );
 
   const school = schoolResult.rows[0];
@@ -41,39 +42,38 @@ export default async function TeacherDashboardPage() {
     redirect("/login");
   }
 
-  const [classesResult, subjectsResult, timetableResult] =
-    await Promise.all([
-      pool.query(
-        `
+  const [classesResult, subjectsResult, timetableResult] = await Promise.all([
+    pool.query(
+      `
           SELECT COUNT(DISTINCT class_id) AS count
           FROM class_teachers
           WHERE school_id = $1
             AND staff_id = $2
         `,
-        [teacher.schoolId, teacher.staffId]
-      ),
+      [teacher.schoolId, teacher.staffId],
+    ),
 
-      pool.query(
-        `
+    pool.query(
+      `
           SELECT COUNT(DISTINCT subject_id) AS count
           FROM teacher_subjects
           WHERE school_id = $1
             AND staff_id = $2
         `,
-        [teacher.schoolId, teacher.staffId]
-      ),
+      [teacher.schoolId, teacher.staffId],
+    ),
 
-      pool.query(
-        `
+    pool.query(
+      `
           SELECT COUNT(*) AS count
           FROM timetable_entries
           WHERE school_id = $1
             AND staff_id = $2
             AND is_active = true
         `,
-        [teacher.schoolId, teacher.staffId]
-      ),
-    ]);
+      [teacher.schoolId, teacher.staffId],
+    ),
+  ]);
 
   const classesCount = Number(classesResult.rows[0]?.count ?? 0);
   const subjectsCount = Number(subjectsResult.rows[0]?.count ?? 0);
@@ -211,6 +211,25 @@ export default async function TeacherDashboardPage() {
           </Link>
 
           <Link
+            href="/teacher/tasks"
+            className="group rounded-2xl border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                <ClipboardList className="h-6 w-6" />
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+            </div>
+            <p className="mt-5 text-sm font-medium text-muted-foreground">
+              My Tasks
+            </p>
+            <p className="mt-2 text-sm">
+              Review responsibilities, update progress, and submit completion
+              notes.
+            </p>
+          </Link>
+
+          <Link
             href="/teacher/assignments"
             className="group rounded-2xl border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
           >
@@ -283,9 +302,8 @@ export default async function TeacherDashboardPage() {
               <h2 className="font-semibold">Your teaching access</h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 Your portal is connected to your school account and teacher
-                record. You only have access to the students, classes,
-                subjects, attendance, assignments, and results assigned to
-                you.
+                record. You only have access to the students, classes, subjects,
+                attendance, assignments, and results assigned to you.
               </p>
             </div>
           </div>

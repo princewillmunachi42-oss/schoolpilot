@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
+import {
+  DEFAULT_GRADING_SCALE,
+  validateGradingScale,
+  calculateGrade,
+} from "@/lib/academics/grading";
 import { getCurrentUser } from "@/lib/auth/session";
+
+async function getSchoolGradingScale(schoolId: string) {
+  const result = await pool.query(
+    "SELECT grading_scale FROM school_grading_scales WHERE school_id = $1 LIMIT 1",
+    [schoolId],
+  );
+  return result.rows[0]
+    ? validateGradingScale(result.rows[0].grading_scale)
+    : DEFAULT_GRADING_SCALE;
+}
 
 async function getOwnerSchool(userId: string) {
   const result = await pool.query(
@@ -9,7 +24,7 @@ async function getOwnerSchool(userId: string) {
      WHERE user_id = $1
        AND role = 'owner'
      LIMIT 1`,
-    [userId]
+    [userId],
   );
 
   return result.rows[0]?.school_id ?? null;
@@ -34,7 +49,7 @@ export async function GET(request: NextRequest) {
     if (!studentId) {
       return NextResponse.json(
         { error: "student_id is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -67,7 +82,7 @@ export async function GET(request: NextRequest) {
        WHERE r.school_id = $1
          AND r.student_id = $2
        ORDER BY s.start_date DESC, t.name ASC, sub.name ASC`,
-      [schoolId, studentId]
+      [schoolId, studentId],
     );
 
     return NextResponse.json({
@@ -78,7 +93,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       { error: "Failed to load results" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -106,7 +121,6 @@ export async function POST(request: NextRequest) {
       subject_id,
       ca_score,
       exam_score,
-      grade,
       remarks,
     } = body;
 
@@ -120,7 +134,7 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "Missing required result fields" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -137,7 +151,7 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json(
         { error: "CA score must be 0-40 and exam score must be 0-60" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -147,14 +161,11 @@ export async function POST(request: NextRequest) {
        WHERE id = $1
          AND school_id = $2
        LIMIT 1`,
-      [student_id, schoolId]
+      [student_id, schoolId],
     );
 
     if (!studentCheck.rows[0]) {
-      return NextResponse.json(
-        { error: "Student not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Student not found" }, { status: 404 });
     }
 
     const subjectCheck = await pool.query(
@@ -164,15 +175,15 @@ export async function POST(request: NextRequest) {
          AND school_id = $2
          AND status = 'active'
        LIMIT 1`,
-      [subject_id, schoolId]
+      [subject_id, schoolId],
     );
 
     if (!subjectCheck.rows[0]) {
-      return NextResponse.json(
-        { error: "Subject not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Subject not found" }, { status: 404 });
     }
+
+    const gradingScale = await getSchoolGradingScale(schoolId);
+    const grade = calculateGrade(ca + exam, gradingScale).grade;
 
     const result = await pool.query(
       `INSERT INTO results (
@@ -208,13 +219,10 @@ export async function POST(request: NextRequest) {
         exam,
         grade || null,
         remarks || null,
-      ]
+      ],
     );
 
-    return NextResponse.json(
-      { result: result.rows[0] },
-      { status: 201 }
-    );
+    return NextResponse.json({ result: result.rows[0] }, { status: 201 });
   } catch (error: unknown) {
     const pgError = error as { code?: string };
 
@@ -224,7 +232,7 @@ export async function POST(request: NextRequest) {
           error:
             "A result already exists for this student, subject, session and term",
         },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -232,7 +240,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { error: "Failed to create result" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

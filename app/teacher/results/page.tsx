@@ -13,6 +13,11 @@ import {
   Users,
   X,
 } from "lucide-react";
+import {
+  calculateGrade,
+  DEFAULT_GRADING_SCALE,
+  type GradeBand,
+} from "@/lib/academics/grading";
 
 type TeacherClass = {
   id: string;
@@ -60,8 +65,6 @@ type ResultInput = {
   remarks: string;
 };
 
-const GRADES = ["A", "B", "C", "D", "E", "F"];
-
 function studentName(student: ResultRow) {
   return [student.first_name, student.other_name, student.last_name]
     .filter(Boolean)
@@ -90,6 +93,9 @@ export default function TeacherResultsPage() {
 
   const [students, setStudents] = useState<ResultRow[]>([]);
   const [results, setResults] = useState<Record<string, ResultInput>>({});
+  const [gradingScale, setGradingScale] = useState<GradeBand[]>(
+    DEFAULT_GRADING_SCALE,
+  );
   const [editing, setEditing] = useState<Record<string, boolean>>({});
 
   const [loadingOptions, setLoadingOptions] = useState(true);
@@ -108,7 +114,7 @@ export default function TeacherResultsPage() {
       (subject) =>
         subject.class_id === null ||
         subject.class_id === undefined ||
-        subject.class_id === selectedClass
+        subject.class_id === selectedClass,
     );
   }, [subjects, selectedClass]);
 
@@ -116,11 +122,10 @@ export default function TeacherResultsPage() {
     classes.find((item) => item.id === selectedClass)?.name ?? "—";
 
   const selectedSubjectName =
-    availableSubjects.find((item) => item.id === selectedSubject)?.name ??
-    "—";
+    availableSubjects.find((item) => item.id === selectedSubject)?.name ?? "—";
 
-  const savedCount = students.filter(
-    (student) => Boolean(student.result_id)
+  const savedCount = students.filter((student) =>
+    Boolean(student.result_id),
   ).length;
 
   const pendingCount = students.length - savedCount;
@@ -138,9 +143,7 @@ export default function TeacherResultsPage() {
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(
-            data.error || "Failed to load result options."
-          );
+          throw new Error(data.error || "Failed to load result options.");
         }
 
         setClasses(data.classes ?? []);
@@ -153,9 +156,7 @@ export default function TeacherResultsPage() {
         }
       } catch (err) {
         setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load result options."
+          err instanceof Error ? err.message : "Failed to load result options.",
         );
       } finally {
         setLoadingOptions(false);
@@ -175,7 +176,7 @@ export default function TeacherResultsPage() {
       (subject) =>
         subject.class_id === null ||
         subject.class_id === undefined ||
-        subject.class_id === selectedClass
+        subject.class_id === selectedClass,
     );
 
     setSelectedSubject(firstSubject?.id ?? "");
@@ -204,16 +205,16 @@ export default function TeacherResultsPage() {
           `/api/teacher/results?${params.toString()}`,
           {
             cache: "no-store",
-          }
+          },
         );
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(
-            data.error || "Failed to load results."
-          );
+          throw new Error(data.error || "Failed to load results.");
         }
+
+        setGradingScale(data.grading_scale ?? DEFAULT_GRADING_SCALE);
 
         const rows: ResultRow[] = data.results ?? [];
 
@@ -224,13 +225,11 @@ export default function TeacherResultsPage() {
         rows.forEach((student) => {
           nextResults[student.id] = {
             ca_score:
-              student.ca_score !== null &&
-              student.ca_score !== undefined
+              student.ca_score !== null && student.ca_score !== undefined
                 ? String(student.ca_score)
                 : "",
             exam_score:
-              student.exam_score !== null &&
-              student.exam_score !== undefined
+              student.exam_score !== null && student.exam_score !== undefined
                 ? String(student.exam_score)
                 : "",
             grade: student.grade ?? "",
@@ -242,9 +241,7 @@ export default function TeacherResultsPage() {
         setEditing({});
       } catch (err) {
         setError(
-          err instanceof Error
-            ? err.message
-            : "Failed to load results."
+          err instanceof Error ? err.message : "Failed to load results.",
         );
       } finally {
         setLoadingResults(false);
@@ -257,7 +254,7 @@ export default function TeacherResultsPage() {
   function updateResult(
     studentId: string,
     field: keyof ResultInput,
-    value: string
+    value: string,
   ) {
     setResults((current) => ({
       ...current,
@@ -277,19 +274,22 @@ export default function TeacherResultsPage() {
     const ca = Number(record.ca_score);
     const exam = Number(record.exam_score);
 
-    if (!Number.isFinite(ca) || ca < 0 || ca > 40) {
+    if (
+      record.ca_score.trim() === "" ||
+      !Number.isFinite(ca) ||
+      ca < 0 ||
+      ca > 40
+    ) {
       return "CA score must be between 0 and 40.";
     }
 
-    if (!Number.isFinite(exam) || exam < 0 || exam > 60) {
-      return "Exam score must be between 0 and 60.";
-    }
-
     if (
-      record.grade &&
-      !GRADES.includes(record.grade.toUpperCase())
+      record.exam_score.trim() === "" ||
+      !Number.isFinite(exam) ||
+      exam < 0 ||
+      exam > 60
     ) {
-      return "Invalid grade.";
+      return "Exam score must be between 0 and 60.";
     }
 
     return "";
@@ -332,7 +332,6 @@ export default function TeacherResultsPage() {
                 result_id: student.result_id,
                 ca_score: Number(record.ca_score),
                 exam_score: Number(record.exam_score),
-                grade: record.grade || null,
                 remarks: record.remarks || null,
               }
             : {
@@ -343,18 +342,15 @@ export default function TeacherResultsPage() {
                 term_id: term.id,
                 ca_score: Number(record.ca_score),
                 exam_score: Number(record.exam_score),
-                grade: record.grade || null,
                 remarks: record.remarks || null,
-              }
+              },
         ),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.error || "Failed to save result."
-        );
+        throw new Error(data.error || "Failed to save result.");
       }
 
       const saved = data.result;
@@ -371,8 +367,8 @@ export default function TeacherResultsPage() {
                 grade: saved.grade,
                 remarks: saved.remarks,
               }
-            : item
-        )
+            : item,
+        ),
       );
 
       setEditing((current) => ({
@@ -383,14 +379,10 @@ export default function TeacherResultsPage() {
       setSuccess(
         isEditing
           ? `Result updated for ${studentName(student)}.`
-          : `Result saved for ${studentName(student)}.`
+          : `Result saved for ${studentName(student)}.`,
       );
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to save result."
-      );
+      setError(err instanceof Error ? err.message : "Failed to save result.");
     } finally {
       setSaving(false);
     }
@@ -406,13 +398,11 @@ export default function TeacherResultsPage() {
       ...current,
       [student.id]: {
         ca_score:
-          student.ca_score !== null &&
-          student.ca_score !== undefined
+          student.ca_score !== null && student.ca_score !== undefined
             ? String(student.ca_score)
             : "",
         exam_score:
-          student.exam_score !== null &&
-          student.exam_score !== undefined
+          student.exam_score !== null && student.exam_score !== undefined
             ? String(student.exam_score)
             : "",
         grade: student.grade ?? "",
@@ -468,8 +458,8 @@ export default function TeacherResultsPage() {
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                Enter and update student results for your assigned
-                classes and subjects.
+                Enter and update student results for your assigned classes and
+                subjects.
               </p>
             </div>
 
@@ -478,9 +468,7 @@ export default function TeacherResultsPage() {
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Current assessment
                 </p>
-                <p className="mt-1 font-semibold">
-                  {selectedSubjectName}
-                </p>
+                <p className="mt-1 font-semibold">{selectedSubjectName}</p>
                 <p className="mt-0.5 text-sm text-muted-foreground">
                   {selectedClassName}
                 </p>
@@ -521,9 +509,7 @@ export default function TeacherResultsPage() {
               </span>
             </div>
 
-            <p className="mt-4 text-2xl font-bold">
-              {students.length}
-            </p>
+            <p className="mt-4 text-2xl font-bold">{students.length}</p>
 
             <p className="mt-1 text-sm text-muted-foreground">
               In selected class
@@ -541,13 +527,9 @@ export default function TeacherResultsPage() {
               </span>
             </div>
 
-            <p className="mt-4 text-2xl font-bold">
-              {savedCount}
-            </p>
+            <p className="mt-4 text-2xl font-bold">{savedCount}</p>
 
-            <p className="mt-1 text-sm text-muted-foreground">
-              Results saved
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">Results saved</p>
           </div>
 
           <div className="rounded-2xl border border-warning/20 bg-card p-5 shadow-sm transition-shadow hover:shadow-md">
@@ -561,9 +543,7 @@ export default function TeacherResultsPage() {
               </span>
             </div>
 
-            <p className="mt-4 text-2xl font-bold">
-              {pendingCount}
-            </p>
+            <p className="mt-4 text-2xl font-bold">{pendingCount}</p>
 
             <p className="mt-1 text-sm text-muted-foreground">
               Awaiting results
@@ -579,9 +559,7 @@ export default function TeacherResultsPage() {
               </div>
 
               <div>
-                <h2 className="text-lg font-semibold">
-                  Assessment Selection
-                </h2>
+                <h2 className="text-lg font-semibold">Assessment Selection</h2>
 
                 <p className="text-sm text-muted-foreground">
                   Select the class and subject you want to manage.
@@ -602,9 +580,7 @@ export default function TeacherResultsPage() {
               <select
                 id="teacher-results-class"
                 value={selectedClass}
-                onChange={(event) =>
-                  setSelectedClass(event.target.value)
-                }
+                onChange={(event) => setSelectedClass(event.target.value)}
                 className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition-shadow focus:ring-2 focus:ring-ring"
               >
                 {classes.map((item) => (
@@ -627,9 +603,7 @@ export default function TeacherResultsPage() {
               <select
                 id="teacher-results-subject"
                 value={selectedSubject}
-                onChange={(event) =>
-                  setSelectedSubject(event.target.value)
-                }
+                onChange={(event) => setSelectedSubject(event.target.value)}
                 className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition-shadow focus:ring-2 focus:ring-ring"
               >
                 {availableSubjects.map((item) => (
@@ -659,9 +633,7 @@ export default function TeacherResultsPage() {
 
             <span className="rounded-lg bg-background px-3 py-2 text-sm text-muted-foreground">
               Scale:{" "}
-              <strong className="text-foreground">
-                40 CA + 60 Exam
-              </strong>
+              <strong className="text-foreground">40 CA + 60 Exam</strong>
             </span>
           </div>
         </section>
@@ -670,9 +642,7 @@ export default function TeacherResultsPage() {
           <div className="border-b border-border p-5 sm:p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-lg font-semibold">
-                  Student Results
-                </h2>
+                <h2 className="text-lg font-semibold">Student Results</h2>
 
                 <p className="mt-1 text-sm text-muted-foreground">
                   Enter CA and exam scores, then save each student.
@@ -701,13 +671,11 @@ export default function TeacherResultsPage() {
                 <GraduationCap className="h-7 w-7" />
               </div>
 
-              <p className="mt-4 font-semibold">
-                No students found
-              </p>
+              <p className="mt-4 font-semibold">No students found</p>
 
               <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-muted-foreground">
-                Make sure students are enrolled in this class before
-                entering results.
+                Make sure students are enrolled in this class before entering
+                results.
               </p>
             </div>
           ) : (
@@ -723,6 +691,20 @@ export default function TeacherResultsPage() {
                 const hasSavedResult = Boolean(student.result_id);
                 const isEditing = Boolean(editing[student.id]);
                 const total = calculateTotal(record);
+                const caValue = Number(record.ca_score);
+                const examValue = Number(record.exam_score);
+                const hasValidScores =
+                  record.ca_score.trim() !== "" &&
+                  record.exam_score.trim() !== "" &&
+                  Number.isFinite(caValue) &&
+                  Number.isFinite(examValue) &&
+                  caValue >= 0 &&
+                  caValue <= 40 &&
+                  examValue >= 0 &&
+                  examValue <= 60;
+                const previewBand = hasValidScores
+                  ? calculateGrade(total, gradingScale)
+                  : null;
 
                 return (
                   <article
@@ -757,8 +739,7 @@ export default function TeacherResultsPage() {
 
                             <p className="mt-1 text-sm text-muted-foreground">
                               Admission No:{" "}
-                              {student.admission_number ||
-                                "Not assigned"}
+                              {student.admission_number || "Not assigned"}
                             </p>
                           </div>
                         </div>
@@ -830,14 +811,12 @@ export default function TeacherResultsPage() {
                             max="40"
                             step="0.01"
                             value={record.ca_score}
-                            disabled={
-                              hasSavedResult && !isEditing
-                            }
+                            disabled={hasSavedResult && !isEditing}
                             onChange={(event) =>
                               updateResult(
                                 student.id,
                                 "ca_score",
-                                event.target.value
+                                event.target.value,
                               )
                             }
                             className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition-shadow focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
@@ -859,14 +838,12 @@ export default function TeacherResultsPage() {
                             max="60"
                             step="0.01"
                             value={record.exam_score}
-                            disabled={
-                              hasSavedResult && !isEditing
-                            }
+                            disabled={hasSavedResult && !isEditing}
                             onChange={(event) =>
                               updateResult(
                                 student.id,
                                 "exam_score",
-                                event.target.value
+                                event.target.value,
                               )
                             }
                             className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition-shadow focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
@@ -874,36 +851,24 @@ export default function TeacherResultsPage() {
                         </div>
 
                         <div>
-                          <label
-                            htmlFor={`grade-${student.id}`}
-                            className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                          >
-                            Grade
+                          <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            {isEditing || !hasSavedResult
+                              ? "Grade preview"
+                              : "Saved grade"}
                           </label>
 
-                          <select
-                            id={`grade-${student.id}`}
-                            value={record.grade}
-                            disabled={
-                              hasSavedResult && !isEditing
-                            }
-                            onChange={(event) =>
-                              updateResult(
-                                student.id,
-                                "grade",
-                                event.target.value
-                              )
-                            }
-                            className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition-shadow focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            <option value="">Select grade</option>
+                          <div className="flex min-h-11 items-center rounded-xl border border-border bg-muted px-3 text-sm font-bold">
+                            {isEditing || !hasSavedResult
+                              ? (previewBand?.grade ?? "—")
+                              : (student.grade ?? "—")}
+                          </div>
 
-                            {GRADES.map((grade) => (
-                              <option key={grade} value={grade}>
-                                {grade}
-                              </option>
-                            ))}
-                          </select>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {isEditing || !hasSavedResult
+                              ? (previewBand?.remarks ??
+                                "Enter valid CA and exam scores")
+                              : "Previously saved grade"}
+                          </p>
                         </div>
 
                         <div>
@@ -935,14 +900,12 @@ export default function TeacherResultsPage() {
                           id={`remarks-${student.id}`}
                           type="text"
                           value={record.remarks}
-                          disabled={
-                            hasSavedResult && !isEditing
-                          }
+                          disabled={hasSavedResult && !isEditing}
                           onChange={(event) =>
                             updateResult(
                               student.id,
                               "remarks",
-                              event.target.value
+                              event.target.value,
                             )
                           }
                           placeholder="Optional remark"

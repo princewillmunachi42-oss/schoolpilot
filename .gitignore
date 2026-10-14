@@ -47,3 +47,11 @@ storage/
 
 # Local database backups
 *_backup.sql
+
+# Local backup files
+*.bak
+*.bak-*
+*.log
+
+# Accidental local file
+/0

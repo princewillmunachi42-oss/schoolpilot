@@ -2,6 +2,7 @@
 
 import {
   ArrowUpDown,
+  BarChart3,
   BookMarked,
   BookOpen,
   CalendarDays,
@@ -12,7 +13,6 @@ import {
   LayoutDashboard,
   Megaphone,
   MessageSquare,
-  School,
   Settings,
   UserRound,
   Users,
@@ -54,6 +54,16 @@ const navigationGroups = [
         label: "Subjects",
         href: "/dashboard/subjects",
         icon: BookMarked,
+      },
+      {
+        label: "Advanced Report Cards",
+        href: "/dashboard/report-cards",
+        icon: ClipboardList,
+      },
+      {
+        label: "Weekly Reports",
+        href: "/dashboard/weekly-reports",
+        icon: BarChart3,
       },
       {
         label: "Timetable",
@@ -113,6 +123,11 @@ const navigationGroups = [
       {
         label: "Teacher Assignments",
         href: "/dashboard/teacher-assignments",
+        icon: ClipboardList,
+      },
+      {
+        label: "Teacher Tasks",
+        href: "/dashboard/tasks",
         icon: ClipboardList,
       },
       {
